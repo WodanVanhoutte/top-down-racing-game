@@ -1,0 +1,3 @@
+Zet hier het bestand "It's 2001 and you're drifting in tokyo" (mp3, ogg, wav of flac).
+De bestandsnaam moet "2001" bevatten. Elke race start dan op een ander nummer uit de mix.
+Staat het bestand hier niet, dan speelt de menu-muziek gewoon verder tijdens de race.
