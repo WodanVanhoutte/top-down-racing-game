@@ -1,9 +1,9 @@
 {
-  "level": 5,
-  "bots": 1,
+  "level": 4,
+  "bots": 7,
   "laps_q": 5,
   "laps_gp": 3,
-  "weather": 0,
+  "weather": 1,
   "env": 2,
   "volume": 0,
   "gp_races": 4,

@@ -1,0 +1,28 @@
+{
+  "level": 4,
+  "bots": 7,
+  "laps_q": 3,
+  "laps_gp": 3,
+  "weather": 0,
+  "city": 1,
+  "gp_races": 4,
+  "car": {
+    "color": [
+      250,
+      205,
+      40
+    ],
+    "accent": [
+      20,
+      20,
+      24
+    ],
+    "body": 0,
+    "stats": [
+      5,
+      5,
+      5,
+      5
+    ]
+  }
+}

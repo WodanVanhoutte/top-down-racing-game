@@ -1,14 +1,14 @@
 {
-  "level": 2,
-  "bots": 3,
-  "laps_q": 5,
+  "level": 4,
+  "bots": 7,
+  "laps_q": 3,
   "laps_gp": 3,
   "weather": 0,
   "city": 1,
   "gp_races": 4,
   "car": {
-    "model": 5,
-    "tint": 2,
+    "model": 2,
+    "tint": 18,
     "stats": [
       10,
       10,

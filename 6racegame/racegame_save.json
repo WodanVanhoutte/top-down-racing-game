@@ -3,8 +3,8 @@
   "bots": 4,
   "laps_q": 7,
   "laps_gp": 3,
-  "weather": 0,
-  "city": 1,
+  "weather": 1,
+  "city": 0,
   "gp_races": 4,
   "car": {
     "model": 22,

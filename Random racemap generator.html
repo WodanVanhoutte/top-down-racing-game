@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Random racemap generator</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #f4f4f2; --fg: #1d1d1b; --card: #ffffff; --line: #d0d0cc;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1c1e; --fg: #ececea; --card: #26282b; --line: #3b3e42;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1c1e; --fg: #ececea; --card: #26282b; --line: #3b3e42;
+    color-scheme: dark;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+         font-family: system-ui, sans-serif; }
+  h1 { font-size: 1.2rem; margin: 0 0 12px; }
+  canvas { width: 100%; max-width: 800px; aspect-ratio: 1; display: block;
+           border-radius: 8px; border: 1px solid var(--line); }
+  .rij { display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+         margin: 12px 0; max-width: 800px; }
+  label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 4px; }
+  button { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line);
+           background: var(--card); color: var(--fg); cursor: pointer; font-size: 0.95rem; }
+  textarea { width: 100%; max-width: 800px; height: 90px; background: var(--card);
+             color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+             font-family: monospace; font-size: 0.75rem; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<h1>🏁 Random racemap generator</h1>
+
+<canvas id="canvas" width="800" height="800"></canvas>
+
+<div class="rij">
+  <button id="nieuw">Nieuwe map</button>
+  <label>Aantal bochten: <span id="bochtenTxt">12</span>
+    <input type="range" id="bochten" min="6" max="24" value="12"></label>
+  <label>Ruwheid: <span id="ruwheidTxt">40</span>%
+    <input type="range" id="ruwheid" min="10" max="70" value="40"></label>
+  <label>Wegbreedte: <span id="breedteTxt">44</span>
+    <input type="range" id="breedte" min="24" max="70" value="44"></label>
+</div>
+
+<p style="max-width:800px;font-size:0.85rem">Punten van het midden van de baan (JSON), om in je game te gebruiken:</p>
+<textarea id="uitvoer" readonly></textarea>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const W = canvas.width, H = canvas.height;
+
+let punten = [];   // de middellijn van de baan: lijst van {x, y}
+
+// ---------- STAP 1: maak random punten rond een cirkel ----------
+function maakRuwePunten(aantal, ruwheid) {
+  const lijst = [];
+  const midX = W / 2, midY = H / 2;
+  const basisStraal = Math.min(W, H) * 0.32;
+
+  for (let i = 0; i < aantal; i++) {
+    const hoek = (i / aantal) * Math.PI * 2;                   // gelijkmatig verdeeld
+    const variatie = 1 + (Math.random() * 2 - 1) * ruwheid;    // bv. tussen 0.6 en 1.4
+    const straal = basisStraal * variatie;
+    lijst.push({
+      x: midX + Math.cos(hoek) * straal,
+      y: midY + Math.sin(hoek) * straal
+    });
+  }
+  return lijst;
+}
+
+// ---------- STAP 2: maak er een vloeiende lus van (Catmull-Rom spline) ----------
+function glad(p0, p1, p2, p3, t) {
+  const t2 = t * t, t3 = t2 * t;
+  return 0.5 * (
+    (2 * p1) +
+    (-p0 + p2) * t +
+    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+    (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+  );
+}
+
+function maakVloeiendeBaan(ruw, stappenPerStuk) {
+  const baan = [];
+  const n = ruw.length;
+  for (let i = 0; i < n; i++) {
+    // % n zorgt dat het laatste punt weer bij het eerste aansluit (gesloten lus)
+    const p0 = ruw[(i - 1 + n) % n];
+    const p1 = ruw[i];
+    const p2 = ruw[(i + 1) % n];
+    const p3 = ruw[(i + 2) % n];
+    for (let s = 0; s < stappenPerStuk; s++) {
+      const t = s / stappenPerStuk;
+      baan.push({
+        x: glad(p0.x, p1.x, p2.x, p3.x, t),
+        y: glad(p0.y, p1.y, p2.y, p3.y, t)
+      });
+    }
+  }
+  return baan;
+}
+
+// ---------- STAP 3: tekenen ----------
+function tekenLijn(lijst, kleur, breedte, stippel) {
+  ctx.beginPath();
+  ctx.moveTo(lijst[0].x, lijst[0].y);
+  for (let i = 1; i < lijst.length; i++) ctx.lineTo(lijst[i].x, lijst[i].y);
+  ctx.closePath();
+  ctx.strokeStyle = kleur;
+  ctx.lineWidth = breedte;
+  ctx.lineJoin = "round";
+  ctx.setLineDash(stippel || []);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function tekenMap() {
+  const breedte = Number(document.getElementById("breedte").value);
+
+  // gras
+  ctx.fillStyle = "#4a8f3c";
+  ctx.fillRect(0, 0, W, H);
+
+  // baan: eerst wit (randen), dan grijs (asfalt) erbovenop
+  tekenLijn(punten, "#ffffff", breedte + 6);
+  tekenLijn(punten, "#44474c", breedte);
+  tekenLijn(punten, "#e8e8e8", 2, [12, 14]);   // stippellijn in het midden
+
+  // start/finish: streep loodrecht op de rijrichting bij punt 0
+  const a = punten[0], b = punten[3];
+  const hoek = Math.atan2(b.y - a.y, b.x - a.x) + Math.PI / 2;
+  const dx = Math.cos(hoek) * breedte / 2, dy = Math.sin(hoek) * breedte / 2;
+  ctx.beginPath();
+  ctx.moveTo(a.x - dx, a.y - dy);
+  ctx.lineTo(a.x + dx, a.y + dy);
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 8;
+  ctx.stroke();
+}
+
+// ---------- STAP 4: alles samen ----------
+function genereer() {
+  const aantal = Number(document.getElementById("bochten").value);
+  const ruwheid = Number(document.getElementById("ruwheid").value) / 100;
+
+  const ruw = maakRuwePunten(aantal, ruwheid);
+  punten = maakVloeiendeBaan(ruw, 12);
+  tekenMap();
+
+  // afgeronde punten in het tekstvak zetten
+  const afgerond = punten.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+  document.getElementById("uitvoer").value = JSON.stringify(afgerond);
+}
+
+// knoppen en sliders
+document.getElementById("nieuw").onclick = genereer;
+for (const id of ["bochten", "ruwheid", "breedte"]) {
+  document.getElementById(id).oninput = () => {
+    document.getElementById(id + "Txt").textContent = document.getElementById(id).value;
+    if (id === "breedte") tekenMap(); else genereer();
+  };
+}
+
+genereer();
+</script>
+</body>
+</html>
