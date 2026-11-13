@@ -1,0 +1,19 @@
+{
+  "level": 4,
+  "bots": 4,
+  "laps_q": 7,
+  "laps_gp": 3,
+  "weather": 0,
+  "city": 1,
+  "gp_races": 4,
+  "car": {
+    "model": 22,
+    "tint": 21,
+    "stats": [
+      5,
+      5,
+      5,
+      5
+    ]
+  }
+}
