@@ -16,9 +16,6 @@ Spelmodi
                   of SNELWEG (4 rijstroken met verkeer; jij kiest hoeveel auto's er rijden)
                   of TOKYO (neonstad bij nacht: hier is DRIFTEN het doel, je krijgt punten voor je slijphoek)
     GELUID        motor, bandenkrijs, botsingen, sprongen... (volume in de instellingen)
-    ARENA         monstertrucks die stunts doen: sprong, backflip, frontflip, wheelie, 360-draai...
-                  Bouw je eigen truck, haal highscores (freestyle) of battle tegen bots.
-
 Besturing tijdens de race
     Pijltje omhoog / W      gas
     Pijltje omlaag / S      remmen / achteruit
@@ -102,28 +99,11 @@ LEVELS = {
             color=(200, 80, 255)),
 }
 
-# arena (monstertrucks)
-TRUCK_STYLES = ["Pickup", "Muscle", "Beast", "Buggy"]
-TRUCK_DECALS = ["Geen", "Vlammen", "Racestrepen", "Geblokt", "Bliksem"]
-TRUCK_WHEELS = ["Normaal", "Groot", "Gigantisch"]
-TRUCK_STATS = ["Topsnelheid", "Vering (hoogte)", "Flip-snelheid", "Nitro"]
-ARENA_MODES = ["FREESTYLE", "BATTLE"]
-ARENA_MAX_BOTS = 5
-ARENA_TIME_MIN, ARENA_TIME_MAX = 60, 300
-
-PALETTE = [(225, 40, 40), (255, 140, 30), (250, 205, 40), (140, 210, 50),
-           (40, 170, 80), (30, 185, 170), (60, 190, 240), (50, 120, 235),
-           (140, 80, 220), (240, 90, 170), (235, 235, 240), (45, 48, 56)]
-ACCENTS = [(245, 245, 245), (20, 20, 24), (250, 205, 40), (225, 40, 40),
-           (50, 120, 235), (255, 140, 30), (40, 170, 80), (170, 175, 190)]
 BOT_NAMES = ["Viper", "Blitz", "Nova", "Turbo", "Apex", "Drift", "Rocket", "Comet",
              "Falcon", "Storm"]
 
 DEFAULTS = dict(level=2, bots=3, laps_q=5, laps_gp=3, weather=0, env=0, volume=7, gp_races=4, traffic=12,
-                car=dict(model=0, tint=0, stats=[5, 5, 5, 5]),
-                truck=dict(style=0, color=0, accent=2, decal=1, wheels=1, lights=1, stats=[5, 5, 5, 5]),
-                arena_mode=0, arena_bots=3, arena_time=120,
-                hs=dict(free=[], battle=[], stunt=0, stunt_name=""))
+                car=dict(model=0, tint=0, stats=[5, 5, 5, 5]))
 
 
 # ------------------------------------------------------------------ hulpfuncties
@@ -175,25 +155,6 @@ def sanitize(d):
     d["traffic"] = int(clamp(int(d["traffic"]), 0, MAX_TRAFFIC))
     d["volume"] = int(clamp(int(d["volume"]), 0, 10))
     d["gp_races"] = int(clamp(int(d["gp_races"]), 2, 8))
-    d["arena_mode"] = 1 if int(d["arena_mode"]) else 0
-    d["arena_bots"] = int(clamp(int(d["arena_bots"]), 1, ARENA_MAX_BOTS))
-    d["arena_time"] = int(clamp(round(int(d["arena_time"]) / 30) * 30, ARENA_TIME_MIN, ARENA_TIME_MAX))
-    tr = d["truck"]
-    tr["style"] = int(clamp(int(tr["style"]), 0, len(TRUCK_STYLES) - 1))
-    tr["color"] = int(clamp(int(tr["color"]), 0, len(PALETTE) - 1))
-    tr["accent"] = int(clamp(int(tr["accent"]), 0, len(ACCENTS) - 1))
-    tr["decal"] = int(clamp(int(tr["decal"]), 0, len(TRUCK_DECALS) - 1))
-    tr["wheels"] = int(clamp(int(tr["wheels"]), 0, len(TRUCK_WHEELS) - 1))
-    tr["lights"] = 1 if int(tr["lights"]) else 0
-    tst = [int(clamp(int(v), 0, STAT_MAX)) for v in list(tr["stats"])[:4]]
-    while len(tst) < 4:
-        tst.append(5)
-    tr["stats"] = tst
-    hs = d["hs"]
-    for k in ("free", "battle"):
-        hs[k] = sorted((int(v) for v in hs.get(k, [])), reverse=True)[:5]
-    hs["stunt"] = max(0, int(hs.get("stunt", 0)))
-    hs["stunt_name"] = str(hs.get("stunt_name", ""))[:40]
     car = d["car"]
     car["model"] = int(clamp(int(car["model"]), 0, NUM_CARS - 1))
     car["tint"] = int(clamp(int(car["tint"]), 0, TINT_STEPS - 1))
@@ -1600,20 +1561,11 @@ def panel(surf, rect, alpha=150, radius=16, border=True, tint=(10, 14, 22), edge
     surf.blit(s, r.topleft)
 
 
-def apanel(surf, rect, alpha=185, radius=12):
-    """Paneel in de arena-stijl (zwart met oranje rand)."""
-    panel(surf, rect, alpha, radius, True, (14, 9, 5), (255, 140, 30, 110))
-
-
-# kleurenthema's voor knoppen (normaal en arena)
+# kleurenthema voor knoppen
 THEME_DEFAULT = dict(base=(32, 24, 34), hover=(62, 30, 46), sel=(74, 28, 46), dis=(24, 20, 26),
                      border=(90, 62, 76), hover_border=(255, 130, 160), accent=(235, 50, 95),
                      dis_text=(110, 100, 112), field=(18, 24, 38), field_border=(80, 92, 120),
                      fill=(46, 98, 190))
-THEME_ARENA = dict(base=(30, 20, 12), hover=(84, 46, 10), sel=(104, 54, 8), dis=(20, 14, 9),
-                   border=(120, 80, 36), hover_border=(255, 190, 50), accent=(255, 160, 20),
-                   dis_text=(112, 96, 80), field=(22, 14, 8), field_border=(150, 100, 40),
-                   fill=(214, 96, 14))
 
 
 def make_glow(size, color, power=2.0):
@@ -3337,1137 +3289,6 @@ def make_field(n, level, avoid_model):
                  skill=skills[i]) for i in range(n)]
 
 
-# ================================================================== ARENA: monstertrucks en stunts
-ARENA_W, ARENA_H, ARENA_M = 3200, 2200, 360      # wereld (incl. tribunes) en breedte van de tribune-rand
-GRAV = 950.0                                      # zwaartekracht (px/s^2)
-SPIN_RATE = 5.2                                   # draaisnelheid in de lucht (rad/s)
-TRUCK_L, TRUCK_H = 150, 112                       # afmeting van het truck-plaatje
-TRUCK_HEIGHT = 64                                 # hoogte van de truck (voor de projectie tijdens een flip)
-CROWD = [(230, 70, 60), (240, 180, 50), (70, 150, 230), (235, 235, 235), (90, 200, 110), (200, 90, 200)]
-
-
-def _dark(c, k):
-    return mix(c, (0, 0, 0), k)
-
-
-def _lite(c, k):
-    return mix(c, (255, 255, 255), k)
-
-
-def truck_params(cfg):
-    """Vertaal de truck-instellingen naar eigenschappen."""
-    s, v, f, n = cfg["stats"]
-    w = cfg["wheels"]
-    return dict(vmax=330 + 24 * s + 12 * w, accel=330.0, turn=0.95, nitro=60 + 8 * n,
-                hop=360 + 34 * v + 25 * w, flip=6.0 + 0.45 * f)
-
-
-def random_truck_cfg():
-    return dict(style=random.randrange(len(TRUCK_STYLES)), color=random.randrange(len(PALETTE)),
-                accent=random.randrange(len(ACCENTS)), decal=random.randrange(len(TRUCK_DECALS)),
-                wheels=random.randrange(len(TRUCK_WHEELS)), lights=random.randint(0, 1),
-                stats=[random.randint(3, 8) for _ in range(4)])
-
-
-def make_truck_art(cfg):
-    """Teken een monstertruck van boven (neus naar rechts). Geeft (bovenkant, onderkant)."""
-    body, acc = PALETTE[cfg["color"]], ACCENTS[cfg["accent"]]
-    ws = cfg["wheels"]
-    wl, ww = (34, 42, 50)[ws], (18, 22, 26)[ws]
-    cx, cy = TRUCK_L // 2, TRUCK_H // 2
-    off = 24 + ww // 2 - 2
-
-    def wheels(s):
-        for ax in (-40, 40):
-            for sd in (-1, 1):
-                r = pygame.Rect(0, 0, wl, ww)
-                r.center = (cx + ax, cy + sd * off)
-                pygame.draw.rect(s, (20, 20, 24), r, border_radius=ww // 3)
-                for k in range(r.left + 4, r.right - 3, 5):
-                    pygame.draw.line(s, (52, 52, 58), (k, r.top + 2), (k, r.bottom - 3), 2)
-                pygame.draw.rect(s, (90, 90, 100), r, 2, border_radius=ww // 3)
-
-    top = pygame.Surface((TRUCK_L, TRUCK_H), pygame.SRCALPHA)
-    for ax in (-40, 40):                                              # assen
-        pygame.draw.rect(top, (44, 44, 50), (cx + ax - 4, cy - off, 8, 2 * off))
-    wheels(top)
-    dk = _dark(body, 0.4)
-    st = cfg["style"]
-    if st == 0:                                                       # pickup
-        pygame.draw.rect(top, dk, (cx - 51, cy - 26, 102, 52), border_radius=12)
-        pygame.draw.rect(top, body, (cx - 49, cy - 24, 98, 48), border_radius=11)
-        pygame.draw.rect(top, _lite(body, 0.14), (cx + 10, cy - 21, 37, 42), border_radius=8)
-        pygame.draw.rect(top, _dark(body, 0.12), (cx - 26, cy - 21, 34, 42), border_radius=7)
-        pygame.draw.rect(top, (28, 38, 54), (cx + 2, cy - 18, 8, 36), border_radius=3)
-        pygame.draw.rect(top, (28, 38, 54), (cx - 30, cy - 17, 5, 34), border_radius=2)
-        for k in range(-45, -32, 5):
-            pygame.draw.line(top, dk, (cx + k, cy - 20), (cx + k, cy + 20), 2)
-        lx = cx - 12
-    elif st == 1:                                                     # muscle car
-        pygame.draw.rect(top, dk, (cx - 52, cy - 24, 104, 48), border_radius=16)
-        pygame.draw.rect(top, body, (cx - 50, cy - 22, 100, 44), border_radius=15)
-        pygame.draw.rect(top, _lite(body, 0.12), (cx + 6, cy - 19, 42, 38), border_radius=12)
-        pygame.draw.rect(top, _dark(body, 0.55), (cx + 16, cy - 9, 22, 18), border_radius=5)
-        pygame.draw.rect(top, (28, 38, 54), (cx - 22, cy - 18, 26, 36), border_radius=9)
-        pygame.draw.rect(top, _dark(body, 0.15), (cx - 18, cy - 14, 18, 28), border_radius=7)
-        pygame.draw.rect(top, acc, (cx - 52, cy - 22, 6, 44), border_radius=3)
-        lx = cx - 8
-    elif st == 2:                                                     # beast: breed met blower
-        pygame.draw.rect(top, dk, (cx - 50, cy - 28, 100, 56), border_radius=8)
-        pygame.draw.rect(top, body, (cx - 48, cy - 26, 96, 52), border_radius=7)
-        pygame.draw.rect(top, _lite(body, 0.1), (cx + 8, cy - 23, 38, 46), border_radius=5)
-        pygame.draw.circle(top, (190, 194, 204), (cx + 26, cy), 12)
-        pygame.draw.circle(top, (90, 94, 104), (cx + 26, cy), 12, 3)
-        pygame.draw.circle(top, (40, 40, 46), (cx + 26, cy), 5)
-        pygame.draw.rect(top, (28, 38, 54), (cx - 8, cy - 20, 14, 40), border_radius=3)
-        pygame.draw.rect(top, _dark(body, 0.2), (cx - 34, cy - 22, 26, 44), border_radius=4)
-        pygame.draw.rect(top, acc, (cx - 36, cy - 25, 46, 50), 3, border_radius=4)
-        lx = cx - 22
-    else:                                                             # buggy: open frame
-        pygame.draw.rect(top, (40, 40, 46), (cx - 48, cy - 18, 96, 36), border_radius=10)
-        pygame.draw.rect(top, body, (cx - 46, cy - 16, 92, 32), border_radius=9)
-        pygame.draw.rect(top, _lite(body, 0.15), (cx + 16, cy - 14, 30, 28), border_radius=8)
-        pygame.draw.circle(top, (28, 38, 54), (cx - 4, cy), 11)
-        pygame.draw.circle(top, (235, 205, 70), (cx - 4, cy), 7)
-        pygame.draw.rect(top, (170, 175, 185), (cx - 42, cy - 12, 20, 24), border_radius=4)
-        pygame.draw.rect(top, acc, (cx - 20, cy - 23, 38, 46), 3, border_radius=10)
-        lx = cx - 12
-    hw = 18 if st != 3 else 14                                        # halve breedte van de body (voor stickers)
-    d = cfg["decal"]
-    if d == 1:                                                        # vlammen
-        for sd in (-1, 1):
-            pts = [(cx + 46, cy + sd * hw)]
-            for k in range(6):
-                x = cx + 46 - k * 14
-                pts += [(x - 6, cy + sd * (hw - 8 - (k % 2) * 4)), (x - 14, cy + sd * hw)]
-            pygame.draw.polygon(top, acc, pts)
-    elif d == 2:                                                      # racestrepen
-        pygame.draw.rect(top, acc, (cx - 47, cy - 9, 94, 5))
-        pygame.draw.rect(top, acc, (cx - 47, cy + 4, 94, 5))
-    elif d == 3:                                                      # geblokt
-        for sd in (-1, 1):
-            y0 = cy - hw if sd < 0 else cy + hw - 5
-            for k in range(0, 92, 8):
-                col = (240, 240, 240) if (k // 8) % 2 == 0 else (20, 20, 24)
-                pygame.draw.rect(top, col, (cx - 46 + k, y0, 8, 5))
-    elif d == 4:                                                      # bliksem
-        pygame.draw.lines(top, acc, False, [(cx + 44, cy - 11), (cx + 18, cy + 2), (cx + 30, cy + 2),
-                                            (cx - 6, cy + 13), (cx + 4, cy + 3), (cx - 6, cy + 3),
-                                            (cx - 40, cy - 9)], 4)
-    if cfg["lights"]:                                                 # dakverlichting
-        pygame.draw.rect(top, (30, 30, 36), (lx - 3, cy - 16, 7, 32), border_radius=2)
-        for k in range(-12, 13, 6):
-            pygame.draw.circle(top, (255, 244, 160), (lx, cy + k), 2)
-    for sd in (-1, 1):                                                # koplampen
-        pygame.draw.circle(top, (255, 250, 205), (cx + 48, cy + sd * 13), 3)
-
-    under = pygame.Surface((TRUCK_L, TRUCK_H), pygame.SRCALPHA)       # onderkant (als hij op zijn kop ligt)
-    pygame.draw.rect(under, (46, 48, 56), (cx - 50, cy - 22, 100, 44), border_radius=8)
-    pygame.draw.rect(under, (74, 76, 86), (cx - 50, cy - 22, 100, 44), 2, border_radius=8)
-    for ln in (-14, 14):
-        pygame.draw.line(under, (30, 32, 38), (cx - 48, cy + ln), (cx + 48, cy + ln), 4)
-    pygame.draw.line(under, (84, 86, 96), (cx - 40, cy), (cx + 40, cy), 5)
-    pygame.draw.rect(under, (120, 92, 62), (cx - 12, cy + 15, 42, 5))
-    pygame.draw.rect(under, acc, (cx - 8, cy - 20, 16, 6))
-    for ax in (-40, 40):
-        pygame.draw.rect(under, (96, 98, 108), (cx + ax - 3, cy - off, 6, 2 * off))
-        pygame.draw.circle(under, (116, 118, 128), (cx + ax, cy), 8)
-    wheels(under)
-    return top.convert_alpha(), under.convert_alpha()
-
-
-class TruckArt:
-    def __init__(self, cfg):
-        self.top, self.under = make_truck_art(cfg)
-        self.under_f = pygame.transform.flip(self.under, True, False)
-        self.scaled = {}
-        sh = pygame.Surface((TRUCK_L - 14, TRUCK_H - 28), pygame.SRCALPHA)
-        pygame.draw.ellipse(sh, (0, 0, 0, 120), sh.get_rect())
-        self.shadow = sh
-
-    def proj(self, pitch):
-        """Plaatje zoals het er van boven uitziet bij deze stand (flip = korter, op zijn kop = onderkant)."""
-        c, s = math.cos(pitch), abs(math.sin(pitch))
-        L = max(16, int(abs(c) * TRUCK_L + s * TRUCK_HEIGHT * 0.9))
-        key = (c < 0, L // 4)
-        img = self.scaled.get(key)
-        if img is None:
-            if len(self.scaled) > 150:
-                self.scaled.clear()
-            base = self.under_f if c < 0 else self.top
-            img = pygame.transform.smoothscale(base, (max(8, L // 4 * 4), TRUCK_H))
-            self.scaled[key] = img
-        return img
-
-
-_TRUCK_ART = {}
-
-
-def get_truck_art(cfg):
-    key = (cfg["style"], cfg["color"], cfg["accent"], cfg["decal"], cfg["wheels"], cfg["lights"])
-    if key not in _TRUCK_ART:
-        if len(_TRUCK_ART) > 40:
-            _TRUCK_ART.clear()
-        _TRUCK_ART[key] = TruckArt(cfg)
-    return _TRUCK_ART[key]
-
-
-# ------------------------------------------------------------------ stuntpunten
-def flip_name(base, n):
-    return base if n == 1 else (f"DUBBELE {base}" if n == 2 else (f"TRIPLE {base}" if n == 3 else f"{n}x {base}"))
-
-
-class Scorer:
-    """Houdt punten, combo en meldingen bij voor een truck."""
-
-    def __init__(self):
-        self.total = 0
-        self.chain = 0
-        self.chain_t = 0.0
-        self.best = (0, "")
-        self.events = []                     # [titel, tekst, kleur, leeftijd]
-        self.n = dict(flips=0, spins=0, wheelie=0.0, crushes=0, jumps=0, crashes=0, cars=0)
-
-    @property
-    def mult(self):
-        return min(5.0, 1.0 + 0.5 * self.chain)
-
-    def add(self, title, base, col=(255, 220, 70), chain=True):
-        m = self.mult
-        pts = int(base * m)
-        self.total += pts
-        if chain:
-            self.chain += 1
-            self.chain_t = 5.0
-        if pts > self.best[0]:
-            self.best = (pts, title)
-        self.events.append([title, f"+{pts:,}".replace(",", ".") + (f"   x{m:.1f}" if m > 1 else ""), col, 0.0])
-        del self.events[:-5]
-        return pts
-
-    def crash(self):
-        self.chain, self.chain_t = 0, 0.0
-        self.n["crashes"] += 1
-        self.events.append(["CRASH!", "combo kwijt", (255, 90, 70), 0.0])
-
-    def update(self, dt):
-        if self.chain_t > 0:
-            self.chain_t -= dt
-            if self.chain_t <= 0:
-                self.chain = 0
-        for e in self.events:
-            e[3] += dt
-        self.events = [e for e in self.events if e[3] < 2.6]
-
-
-class Junk:
-    """Een oude auto die je kunt platrijden (of overheen springen)."""
-
-    def __init__(self, x, y, ang, model, tint):
-        self.x, self.y, self.ang = x, y, ang
-        self.model, self.tint = model, tint
-        self.crushed = False
-        self.sprite = ART.sprite(model, tint)
-        self.flat = None
-
-    def crush(self):
-        self.crushed = True
-        w, h = self.sprite.get_size()
-        self.flat = pygame.transform.smoothscale(self.sprite, (int(w * 1.12), max(6, int(h * 0.5))))
-        self.flat.fill((120, 110, 105), special_flags=pygame.BLEND_RGB_MULT)
-
-    def draw(self, screen, cx, cy):
-        sx, sy = self.x - cx, self.y - cy
-        if not (-90 < sx < W + 90 and -90 < sy < H + 90):
-            return
-        img = self.flat if self.crushed else self.sprite
-        rot = pygame.transform.rotate(img, -math.degrees(self.ang))
-        screen.blit(rot, rot.get_rect(center=(sx, sy)))
-
-
-# ------------------------------------------------------------------ de arena zelf
-def soft_light(radius, color, a_max=70):
-    """Zachte lichtvlek (alpha-ringen) om op de wereld te leggen."""
-    s = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-    for i in range(22):
-        t = i / 22
-        pygame.draw.circle(s, (*color, int(a_max * t * t)), (radius, radius), int(radius * (1 - t) + 2))
-    return s
-
-
-class ArenaMap:
-    """De arena: hellingen, heuvels, modder en een muur eromheen. Werkt ook als 'track' voor Car.physics."""
-    dirt = True
-
-    def __init__(self):
-        self.w, self.h = ARENA_W, ARENA_H
-        M = ARENA_M
-        self.x0, self.y0, self.x1, self.y1 = M, M, self.w - M, self.h - M
-        self.ramps = []        # (startx, starty, dirx, diry, lengte, halve breedte, hoogte)
-        self.mounds = []       # (x, y, straal, hoogte)
-        self.puddles = []      # (x, y, straal, 0)
-        self.junk_spec = []    # (x, y, hoek)
-        cx, cy = self.w / 2, self.h / 2
-
-        def ramp(x, y, ang, L=190, Wr=80, Hr=80):
-            self.ramps.append((x, y, math.cos(ang), math.sin(ang), L, Wr, Hr))
-        # twee mega-ramps met een rij auto's ervoor
-        ramp(560, cy, 0.0, 260, 100, 120)
-        ramp(self.w - 560, cy, math.pi, 260, 100, 120)
-        for k in range(6):
-            self.junk_spec.append((900 + k * 72, cy, 0.0))
-            self.junk_spec.append((self.w - 900 - k * 72, cy, math.pi))
-        # kleinere schansen die naar het midden wijzen
-        for x, y in ((760, 640), (self.w - 760, 640), (760, self.h - 640), (self.w - 760, self.h - 640),
-                     (cx, 560), (cx, self.h - 560)):
-            ramp(x, y, math.atan2(cy - y, cx - x))
-        self.mounds = [(cx, cy, 150, 40), (cx - 380, cy - 330, 110, 34), (cx + 380, cy + 330, 110, 34),
-                       (cx - 380, cy + 330, 100, 30), (cx + 380, cy - 330, 100, 30)]
-        self.puddles = [(1050, 1480, 105, 0), (2150, 720, 105, 0), (2120, 1500, 100, 0)]
-        for _ in range(9):                                            # losse autowrakken
-            for _try in range(30):
-                x = random.uniform(self.x0 + 220, self.x1 - 220)
-                y = random.uniform(self.y0 + 220, self.y1 - 220)
-                if self.height(x, y) == 0 and not self.in_mud(x, y) and all(
-                        math.hypot(x - jx, y - jy) > 120 for jx, jy, _ in self.junk_spec):
-                    self.junk_spec.append((x, y, random.uniform(0, TAU)))
-                    break
-        self.world = None
-
-    # ---- interface voor Car.physics
-    def on_road(self, x, y):
-        return True
-
-    def in_mud(self, x, y):
-        for px, py, r, _ in self.puddles:
-            if (x - px) ** 2 + (y - py) ** 2 < r * r:
-                return True
-        return False
-
-    def height(self, x, y):
-        """Hoogte van de grond (helling of heuvel) op deze plek."""
-        h = 0.0
-        for sx, sy, dx, dy, L, Wr, Hr in self.ramps:
-            rx, ry = x - sx, y - sy
-            u = rx * dx + ry * dy
-            if 0 <= u <= L and abs(-rx * dy + ry * dx) <= Wr:
-                h = max(h, Hr * u / L)
-        for mx, my, r, hm in self.mounds:
-            d = math.hypot(x - mx, y - my)
-            if d < r:
-                h = max(h, hm * 0.5 * (1 + math.cos(math.pi * d / r)))
-        return h
-
-    # ---- tekenen
-    def render(self):
-        w, h, M = self.w, self.h, ARENA_M
-        world = pygame.Surface((w, h)).convert()
-        world.fill((16, 12, 12))
-        floor = pygame.Rect(M, M, w - 2 * M, h - 2 * M)
-        self._stands(world, floor)
-        tile = make_dirt_tile()
-        for y in range(floor.top, floor.bottom, 256):
-            for x in range(floor.left, floor.right, 256):
-                world.blit(tile, (x, y), pygame.Rect(0, 0, min(256, floor.right - x), min(256, floor.bottom - y)))
-        for _ in range(110):                                          # duinen en kuilen
-            r = random.randint(100, 320)
-            s = pygame.Surface((2 * r, r), pygame.SRCALPHA)
-            c = (236, 172, 104, 20) if random.random() < 0.5 else (110, 64, 30, 26)
-            pygame.draw.ellipse(s, c, s.get_rect())
-            world.blit(s, (random.randint(floor.left, floor.right) - r, random.randint(floor.top, floor.bottom) - r // 2))
-        for _ in range(80):                                           # bandensporen
-            x, y = random.uniform(floor.left + 100, floor.right - 100), random.uniform(floor.top + 100, floor.bottom - 100)
-            a = random.uniform(0, TAU)
-            pts = []
-            for k in range(28):
-                a += random.uniform(-0.2, 0.2)
-                x += math.cos(a) * 34
-                y += math.sin(a) * 34
-                pts.append((x, y))
-            for off in (-9, 9):
-                pygame.draw.lines(world, (150, 98, 54), False, [(px, py + off) for px, py in pts], 4)
-        pygame.draw.circle(world, (170, 116, 66), (w // 2, h // 2), 520, 6)       # ring op de vloer
-        pygame.draw.circle(world, (170, 116, 66), (w // 2, h // 2), 500, 2)
-        for px, py, r, _ in self.puddles:                             # modderpoelen
-            px, py, r = int(px), int(py), int(r)
-            pygame.draw.ellipse(world, (156, 104, 62), (px - r - 6, py - int(r * 0.8) - 6, 2 * r + 12, int(1.6 * r) + 12))
-            pygame.draw.ellipse(world, (92, 58, 32), (px - r, py - int(r * 0.8), 2 * r, int(1.6 * r)))
-            pygame.draw.ellipse(world, (118, 78, 46), (px - int(r * 0.7), py - int(r * 0.5), int(r * 1.3), int(r * 0.8)))
-            pygame.draw.ellipse(world, (176, 140, 108), (px - int(r * 0.5), py - int(r * 0.45), int(r * 0.5), int(r * 0.2)))
-        for mx, my, r, hm in self.mounds:                             # heuvels
-            for i in range(10):
-                t = i / 9
-                rr = int(r * (1 - t * 0.85))
-                col = mix((176, 120, 66), (232, 180, 112), t)
-                pygame.draw.circle(world, col, (int(mx - t * r * 0.12), int(my - t * r * 0.12)), rr)
-            pygame.draw.circle(world, (120, 78, 42), (int(mx), int(my)), int(r), 3)
-        for sx, sy, dx, dy, L, Wr, Hr in self.ramps:                  # hellingen
-            surf = pygame.Surface((int(L) + 40, int(Wr * 2) + 20), pygame.SRCALPHA)
-            for u in range(int(L)):
-                t = u / L
-                pygame.draw.line(surf, mix((110, 78, 46), (236, 196, 120), t), (u + 20, 10), (u + 20, int(Wr * 2) + 10))
-            for u in range(34, int(L) - 10, 44):                      # gele pijlen
-                pygame.draw.polygon(surf, (255, 214, 60), [(u + 22, Wr + 10), (u + 4, Wr - 16), (u + 4, Wr - 6),
-                                                           (u + 12, Wr + 10), (u + 4, Wr + 26), (u + 4, Wr + 36)])
-            pygame.draw.rect(surf, (80, 52, 28), (20, 10, int(L), 8))
-            pygame.draw.rect(surf, (80, 52, 28), (20, int(Wr * 2) + 2, int(L), 8))
-            pygame.draw.rect(surf, (255, 240, 200), (int(L) + 14, 10, 8, int(Wr * 2)))
-            ang = -math.degrees(math.atan2(dy, dx))
-            sh = pygame.Surface((26, int(Wr * 2)), pygame.SRCALPHA)
-            sh.fill((0, 0, 0, 90))
-            rs = pygame.transform.rotate(sh, ang)
-            lipx, lipy = sx + dx * L, sy + dy * L
-            world.blit(rs, rs.get_rect(center=(lipx + dx * 14 + 6, lipy + dy * 14 + 8)))
-            rot = pygame.transform.rotate(surf, ang)
-            world.blit(rot, rot.get_rect(center=(sx + dx * L / 2, sy + dy * L / 2)))
-        # muur (rood/wit) rond de vloer
-        for x in range(floor.left - 34, floor.right + 34, 50):
-            for yy in (floor.top - 34, floor.bottom):
-                pygame.draw.rect(world, (214, 56, 40) if (x // 50) % 2 else (236, 232, 224), (x, yy, 50, 34))
-        for y in range(floor.top - 34, floor.bottom + 34, 50):
-            for xx in (floor.left - 34, floor.right):
-                pygame.draw.rect(world, (214, 56, 40) if (y // 50) % 2 else (236, 232, 224), (xx, y, 34, 50))
-        pygame.draw.rect(world, (60, 56, 56), floor.inflate(68, 68), 3)
-        pygame.draw.rect(world, (30, 20, 14), floor.inflate(2, 2), 4)
-        for cxp, cyp in ((floor.left, floor.top), (floor.right, floor.top), (floor.left, floor.bottom), (floor.right, floor.bottom)):
-            for k in range(3):                                         # bandenstapels in de hoeken
-                pygame.draw.circle(world, (20, 20, 22), (int(cxp + (k - 1) * 18), int(cyp)), 22)
-                pygame.draw.circle(world, (60, 60, 66), (int(cxp + (k - 1) * 18), int(cyp)), 22, 3)
-                pygame.draw.circle(world, (12, 12, 14), (int(cxp + (k - 1) * 18), int(cyp)), 9)
-        glow = soft_light(560, (255, 214, 150), 55)                    # schijnwerpers
-        for gx, gy in ((floor.left + 300, floor.top + 250), (floor.right - 300, floor.top + 250),
-                       (floor.left + 300, floor.bottom - 250), (floor.right - 300, floor.bottom - 250),
-                       (w // 2, h // 2)):
-            world.blit(glow, (gx - 560, gy - 560))
-        self.world = world
-
-    def _stands(self, world, floor):
-        w, h = self.w, self.h
-        bands = [pygame.Rect(0, 0, w, floor.top - 40), pygame.Rect(0, floor.bottom + 40, w, h - floor.bottom - 40),
-                 pygame.Rect(0, floor.top - 40, floor.left - 40, floor.height + 80),
-                 pygame.Rect(floor.right + 40, floor.top - 40, w - floor.right - 40, floor.height + 80)]
-        for b in bands:
-            pygame.draw.rect(world, (28, 24, 28), b)
-            for y in range(b.top + 6, b.bottom - 4, 15):
-                pygame.draw.rect(world, (40, 34, 40), (b.left, y + 9, b.width, 5))
-                for x in range(b.left + 6, b.right - 4, 11):
-                    if random.random() < 0.92:
-                        c = random.choice(CROWD)
-                        c = _dark(c, random.uniform(0.0, 0.5))
-                        pygame.draw.circle(world, c, (x + random.randint(-1, 1), y + random.randint(0, 3)), 4)
-        bf = pygame.font.SysFont("impact,arialblack,arial", 34, bold=True)
-        words = ["MONSTER STUNTS", "NITRO", "BIG AIR", "CRUSH!", "BACKFLIP", "FULL THROTTLE"]
-        cols = [(214, 56, 40), (255, 190, 30), (40, 150, 230), (236, 232, 224)]
-        x = 160
-        i = 0
-        while x < w - 400:
-            img = bf.render(words[i % len(words)], True, (20, 14, 10))
-            bw = img.get_width() + 40
-            for yy in (floor.top - 96, floor.bottom + 56):
-                pygame.draw.rect(world, cols[i % 4], (x, yy, bw, 42), border_radius=6)
-                world.blit(img, (x + 20, yy + 3))
-            x += bw + 90
-            i += 1
-
-    def make_junk(self):
-        return [Junk(x, y, a, random.choice(CIVIL_MODELS), random.choice([0, 0, 5, 10, 14, 19]))
-                for x, y, a in self.junk_spec]
-
-
-class Truck(Car):
-    """Monstertruck: een Car (voor de grondfysica) met hoogte, flips en stuntpunten."""
-
-    def __init__(self, x, y, heading, cfg, name, is_player=False):
-        prm = truck_params(cfg)
-        self.x, self.y, self.heading = x, y, heading
-        self.vx = self.vy = 0.0
-        self.vmax = self.base_vmax = prm["vmax"]
-        self.accel, self.turn = prm["accel"], prm["turn"]
-        self.nitro_cap = prm["nitro"]
-        self.nitro = self.nitro_cap
-        self.boosting = self.braking = False
-        self.name, self.is_player = name, is_player
-        self.color = PALETTE[cfg["color"]]
-        self.slip, self.on_road, self.mud, self.was_mud = 0.0, True, False, False
-        self.air_T, self.z, self.rattle = 0.0, 0.0, 0.0
-        self.hop_v, self.flip_rate = prm["hop"], prm["flip"]
-        self.vz = self.pitch = self.pw = 0.0
-        self.air = False
-        self.info = None                       # gegevens van de huidige sprong
-        self.rise = 0.0                        # hoe snel de grond omhoog liep (voor lanceren)
-        self.wheelie_t = 0.0
-        self.stun = self.hop_cd = self.ram_cd = 0.0
-        self.art = get_truck_art(cfg)
-        self.score = Scorer()
-
-
-def new_air_info(tiny=False):
-    return dict(t=0.0, peak=0.0, back=0.0, front=0.0, spin=0.0, cars=0, over=set(), tiny=tiny)
-
-
-class ArenaBot:
-    """Bot-monstertruck: rijdt naar schansen, springt en doet flips (soms te gewaagd)."""
-
-    def __init__(self, truck, arena, skill):
-        self.t, self.a, self.skill = truck, arena, skill
-        self.target, self.mode, self.ramp = None, "roam", None
-        self.timer = 0.0
-        self.plan = None
-        self.wheelie_left = 0.0
-        self.stuck = 0.0
-
-    def pick(self):
-        m, r = self.a.map, random.random()
-        if r < 0.6 and m.ramps:
-            self.ramp = random.choice(m.ramps)
-            self.mode = "ramp"
-            self.target = (self.ramp[0] - self.ramp[2] * 280, self.ramp[1] - self.ramp[3] * 280)
-        elif r < 0.78 and self.a.junk:
-            j = random.choice(self.a.junk)
-            self.mode, self.target = "roam", (j.x, j.y)
-        else:
-            self.mode = "roam"
-            self.target = (random.uniform(m.x0 + 250, m.x1 - 250), random.uniform(m.y0 + 250, m.y1 - 250))
-        self.timer = 10.0
-
-    def control(self, dt):
-        t, m = self.t, self.a.map
-        if t.air:
-            return self._air()
-        self.plan = None
-        self.timer -= dt
-        if self.target is None or self.timer <= 0:
-            self.pick()
-        tx, ty = self.target
-        if self.mode == "ramp":
-            sx, sy, dx, dy, L, Wr, Hr = self.ramp
-            u = (t.x - sx) * dx + (t.y - sy) * dy
-            v = -(t.x - sx) * dy + (t.y - sy) * dx
-            if abs(v) < 95 and -340 < u:
-                tx, ty = sx + dx * (u + 220), sy + dy * (u + 220)        # recht op de lip aan
-            else:
-                tx, ty = sx - dx * 280, sy - dy * 280                    # eerst naar de startpositie
-            if u > L + 40:
-                self.pick()
-        elif math.hypot(tx - t.x, ty - t.y) < 100:
-            self.pick()
-        if (t.x < m.x0 + 200 or t.x > m.x1 - 200 or t.y < m.y0 + 200 or t.y > m.y1 - 200) and self.mode == "roam":
-            tx, ty = m.w / 2, m.h / 2
-        diff = wrap_rad(math.atan2(ty - t.y, tx - t.x) - t.heading)
-        steer = clamp(diff * 2.6, -1, 1)
-        fs = t.forward_speed
-        thr, brk, boost = True, False, False
-        if abs(diff) > 1.2 and fs > 200:
-            thr, brk = False, True
-        if self.mode == "roam":
-            if self.wheelie_left > 0:
-                self.wheelie_left -= dt
-                boost = t.nitro > 4
-            elif fs > 160 and t.nitro > 70 and abs(diff) < 0.3 and random.random() < dt * 0.1:
-                self.wheelie_left = random.uniform(1.5, 3.2)
-        if fs < 25:
-            self.stuck += dt
-            if self.stuck > 1.6:
-                steer, thr, brk = -steer, False, True
-            if self.stuck > 2.6:
-                self.stuck = 0.0
-                self.pick()
-        else:
-            self.stuck = 0.0
-        return thr, brk, steer, False, boost, 0
-
-    def _air(self):
-        t, info = self.t, self.t.info
-        if info["tiny"]:
-            return False, False, 0, False, False, 0
-        if self.plan is None:
-            T = 2 * max(t.vz, 0.0) / GRAV + 0.15
-            per = TAU / t.flip_rate + 0.12
-            n = int((T - 0.35) / per)
-            n = min(n, 1 + int(self.skill * 3))
-            if n > 0 and random.random() < (1 - self.skill) * 0.5 + 0.04:
-                n += 1                                                    # te gewaagd: kan misgaan
-            spin = random.choice([-1, 1]) if (T > 1.3 and random.random() < 0.4) else 0
-            self.plan = dict(n=n, d=random.choice([1, -1]), spin=spin)
-        pl = self.plan
-        rot = info["back"] if pl["d"] > 0 else info["front"]
-        flip = pl["d"] if (pl["n"] > 0 and rot < pl["n"] * TAU - 0.55) else 0
-        steer = pl["spin"] if (pl["spin"] and abs(info["spin"]) < TAU - 0.5) else 0
-        return False, False, steer, False, False, flip
-
-
-def make_arena_bg():
-    s = pygame.Surface((W, H))
-    for y in range(H):
-        t = y / H
-        c = mix(mix((6, 5, 9), (40, 17, 8), min(1, t * 1.6)), (12, 7, 5), max(0, (t - 0.65) / 0.35))
-        pygame.draw.line(s, c, (0, y), (W, y))
-    glow = soft_light(520, (255, 110, 20), 70)                           # gloed bij de horizon
-    flat = pygame.Surface(glow.get_size())
-    flat.blit(glow, (0, 0))                                              # alpha -> helderheid (voor ADD)
-    s.blit(pygame.transform.smoothscale(flat, (1500, 460)), (W // 2 - 750, H - 400), special_flags=pygame.BLEND_RGB_ADD)
-    pygame.draw.rect(s, (14, 12, 16), (0, 0, W, 46))                     # lichtmast bovenin
-    for x in range(40, W, 110):
-        pygame.draw.circle(s, (255, 236, 190), (x, 24), 9)
-        pygame.draw.circle(s, (255, 190, 90), (x, 24), 15, 3)
-    for x in range(-40, W + 40, 34):                                      # publiek onderin
-        hh = random.randint(0, 12)
-        pygame.draw.circle(s, (8, 6, 8), (x, H - 26 + hh), 22)
-        if random.random() < 0.15:
-            pygame.draw.circle(s, (255, 230, 170), (x + random.randint(-8, 8), H - 44 + hh), 2)
-    for y0, sign in ((0, 1), (H - 18, 1)):                                # waarschuwingsstrepen
-        for x in range(-40, W + 40, 44):
-            pygame.draw.polygon(s, (240, 190, 20), [(x, y0), (x + 22, y0), (x + 22 - 18, y0 + 18), (x - 18, y0 + 18)])
-        pygame.draw.rect(s, (0, 0, 0), (0, y0 + 14, W, 4))
-    return s
-
-
-class ArenaFX:
-    """Bewegende achtergrond van de arena-menu's: zwaaiende lichtbundels en vonken."""
-
-    def __init__(self):
-        self.bg = make_arena_bg()
-        self.ov = pygame.Surface((W, H), pygame.SRCALPHA)
-        self.beams = [(x, random.uniform(0, TAU)) for x in (140, 420, 700, 980, 1180)]
-        self.embers = [[random.uniform(0, W), random.uniform(0, H), random.uniform(-14, 14),
-                        random.uniform(-110, -40), random.uniform(1.5, 3.5)] for _ in range(70)]
-
-    def draw(self, scr, now, dt):
-        scr.blit(self.bg, (0, 0))
-        self.ov.fill((0, 0, 0, 0))
-        for ox, ph in self.beams:
-            a = math.sin(now * 0.55 + ph) * 0.5
-            for k, al in ((0.16, 14), (0.09, 22)):
-                tip = (ox + math.sin(a - k) * 900, 30 + math.cos(a - k) * 900)
-                tip2 = (ox + math.sin(a + k) * 900, 30 + math.cos(a + k) * 900)
-                pygame.draw.polygon(self.ov, (255, 214, 150, al), [(ox, 30), tip, tip2])
-        scr.blit(self.ov, (0, 0))
-        for e in self.embers:
-            e[0] += e[2] * dt + math.sin(now * 2 + e[1]) * 8 * dt
-            e[1] += e[3] * dt
-            if e[1] < -10:
-                e[0], e[1] = random.uniform(0, W), H + 10
-            r = int(e[4])
-            pygame.draw.circle(scr, (255, 150 + int(60 * math.sin(now * 5 + e[0])), 40), (int(e[0]), int(e[1])), r)
-
-
-class Arena:
-    """De stuntarena: freestyle (highscore) of battle tegen bots. Meer punten voor gekkere stunts."""
-
-    def __init__(self, save, sfx):
-        self.sfx = sfx
-        self.mode = save["arena_mode"]
-        n_bots = save["arena_bots"] if self.mode == 1 else 0
-        self.duration = float(save["arena_time"])
-        self.time_left = self.duration
-        self.map = ArenaMap()
-        self.map.render()
-        self.junk = self.map.make_junk()
-        cx, cy = self.map.w / 2, self.map.h / 2
-        self.player = Truck(cx, cy + 640, -math.pi / 2, save["truck"], "Jij", True)
-        self.trucks = [self.player]
-        self.bots = []
-        spots = [(cx - 520, cy + 560), (cx + 520, cy + 560), (cx - 900, cy + 400), (cx + 900, cy + 400), (cx, cy - 640)]
-        names = random.sample(BOT_NAMES, n_bots)
-        for i in range(n_bots):
-            x, y = spots[i]
-            tk = Truck(x, y, -math.pi / 2 if i < 2 else random.uniform(0, TAU), random_truck_cfg(), names[i])
-            self.trucks.append(tk)
-            self.bots.append(ArenaBot(tk, self, 0.55 + 0.07 * i + random.uniform(-0.05, 0.1)))
-        self.particles = []
-        self.shake = 0.0
-        self.state = "countdown"
-        self.countdown = 3.0
-        self._cd_last = 4
-        self.go_t = 0.0
-        self.rpm, self.power = 0.2, 0.15
-        self.cam_x = clamp(self.player.x - W / 2, 0, self.map.w - W)
-        self.cam_y = clamp(self.player.y - H / 2, 0, self.map.h - H)
-        self.dial = make_dial(200)
-        self.t_run = 0.0
-        if sfx:
-            sfx.start_loops(False)
-
-    # ---- hulpjes
-    def ranking(self):
-        return sorted(self.trucks, key=lambda t: -t.score.total)
-
-    def visible(self, t, m=200):
-        return abs(t.x - (self.cam_x + W / 2)) < W / 2 + m and abs(t.y - (self.cam_y + H / 2)) < H / 2 + m
-
-    def spawn(self, x, y, vx, vy, life, size, col, kind=0):
-        self.particles.append([x, y, vx, vy, 0.0, life, size, col, kind])
-
-    def burst(self, x, y, n, col, speed=(60, 200), kind=0, life=(0.4, 0.9), size=(5, 10)):
-        for _ in range(n):
-            a = random.uniform(0, TAU)
-            sp = random.uniform(*speed)
-            self.spawn(x, y, math.cos(a) * sp, math.sin(a) * sp, random.uniform(*life), random.uniform(*size), col, kind)
-
-    def play(self, name, vol=1.0, t=None):
-        if self.sfx and (t is None or t.is_player or self.visible(t)):
-            self.sfx.play(name, vol if (t is None or t.is_player) else vol * 0.4)
-
-    # ---- invoer van de speler
-    def _input(self, keys):
-        up = keys[pygame.K_UP] or keys[pygame.K_w]
-        dn = keys[pygame.K_DOWN] or keys[pygame.K_s]
-        steer = (keys[pygame.K_RIGHT] or keys[pygame.K_d]) - (keys[pygame.K_LEFT] or keys[pygame.K_a])
-        flip = (1 if (dn or keys[pygame.K_q]) else 0) - (1 if (up or keys[pygame.K_e]) else 0)   # +1 = backflip
-        return up, dn, steer, keys[pygame.K_SPACE], keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT], flip
-
-    # ---- een truck een stap laten zetten
-    def _takeoff(self, t, vz, tiny=False):
-        t.air, t.vz = True, vz
-        t.info = new_air_info(tiny)
-        if not tiny:
-            self.play("jump", 0.7, t)
-            self.burst(t.x, t.y, 6, (208, 156, 100))
-
-    def _land(self, t, g):
-        info = t.info
-        impact = -t.vz
-        t.z, t.air, t.air_T = g, False, 0.0
-        w = wrap_rad(t.pitch)
-        t.vx *= 0.94
-        t.vy *= 0.94
-        if impact > 260:
-            self.burst(t.x, t.y, int(min(16, impact / 60)), (208, 156, 100), (60, 190))
-            self.play("thud", clamp(impact / 700, 0.3, 1.0), t)
-            if t.is_player:
-                self.shake = max(self.shake, min(9, impact / 110))
-        if info["tiny"]:
-            t.pitch = w
-            t.pw = 0.0
-            return
-        sc = t.score
-        if abs(w) >= 0.8:                                                 # op zijn dak / zijkant: crash
-            t.stun = 1.5
-            t.pitch = math.pi if abs(w) > 2.3 else w
-            t.pw = 0.0
-            t.vx *= 0.35
-            t.vy *= 0.35
-            sc.crash()
-            self.burst(t.x, t.y, 14, (255, 200, 90), (80, 300), 1, (0.2, 0.5), (2, 3.5))
-            self.play("hit", 0.9, t)
-            if t.is_player:
-                self.shake = max(self.shake, 10)
-            return
-        t.pitch, t.pw = w, 0.0
-        parts = []
-        nb, nf = int((info["back"] + 0.9) // TAU), int((info["front"] + 0.9) // TAU)
-        ns = int((abs(info["spin"]) + 1.0) // TAU)
-        if nb:
-            parts.append((flip_name("BACKFLIP", nb), sum(500 * k for k in range(1, nb + 1))))
-        if nf:
-            parts.append((flip_name("FRONTFLIP", nf), sum(600 * k for k in range(1, nf + 1))))
-        if ns:
-            parts.append((f"{ns * 360} SPIN", sum(400 * k for k in range(1, ns + 1))))
-        if info["cars"]:
-            parts.append((f"OVER {info['cars']} AUTO'S", 220 * info["cars"]))
-        special = len(parts)
-        air_t = info["t"]
-        if air_t > 0.6:
-            parts.append(("BIG AIR" if info["peak"] > 160 else "SPRONG", int(air_t * 100 + info["peak"] * 0.8)))
-            sc.n["jumps"] += 1
-        if not parts:
-            return
-        base = sum(b for _, b in parts)
-        if special >= 2:
-            base = int(base * 1.5)
-            title = "COMBO! " + " + ".join(n for n, _ in parts[:2])
-        else:
-            title = parts[0][0] if special else parts[-1][0]
-        sc.n["flips"] += nb + nf
-        sc.n["spins"] += ns
-        sc.n["cars"] += info["cars"]
-        col = (255, 90, 200) if base >= 3000 else ((255, 150, 40) if base >= 1200 else (255, 220, 70))
-        sc.add(title, base, col)
-        self.play("lap", 0.8, t)
-        if t.is_player:
-            self.shake = max(self.shake, 5)
-
-    def _drive(self, t, dt, inp):
-        m = self.map
-        thr, brk, steer, hop, boost, flip = inp
-        if t.stun > 0:
-            t.stun -= dt
-            thr = brk = hop = boost = False
-            steer = flip = 0
-        t.hop_cd = max(0.0, t.hop_cd - dt)
-        t.ram_cd = max(0.0, t.ram_cd - dt)
-        g = m.height(t.x, t.y)
-        if hop and not t.air and t.hop_cd <= 0 and t.z <= g + 4:
-            t.hop_cd = 0.7
-            self._takeoff(t, t.hop_v)
-        t.air_T = 1.0 if t.air else 0.0
-        t.physics(m, dt, thr, brk, 0 if t.air else steer, False, boost, 1.0)
-        if t.air:
-            t.heading += steer * SPIN_RATE * dt
-            info = t.info
-            info["spin"] += steer * SPIN_RATE * dt
-            info["t"] += dt
-            if flip:
-                t.pw += (flip * t.flip_rate - t.pw) * min(1.0, dt * 9)
-            else:
-                w = wrap_rad(t.pitch)
-                if abs(w) < 1.3:
-                    t.pw += (-w * 22 - t.pw * 5.5) * dt          # automatisch rechtzetten bij bijna rechtop
-                else:
-                    t.pw *= max(0.0, 1 - 1.6 * dt)
-            dp = t.pw * dt
-            t.pitch += dp
-            if dp > 0:
-                info["back"] += dp
-            else:
-                info["front"] -= dp
-            t.vz -= GRAV * dt
-            t.z += t.vz * dt
-            info["peak"] = max(info["peak"], t.z)
-            if t.z <= g and t.vz < 0:
-                self._land(t, g)
-                if not t.info["tiny"] and -t.vz > 420 and t.stun <= 0:      # kleine stuiter na een harde landing
-                    self._takeoff(t, -t.vz * 0.2, True)
-        else:
-            if g >= t.z:
-                nz = min(g, t.z + 700 * dt)
-                t.rise = (nz - t.z) / dt
-                t.z = nz
-            elif t.z - g > 6:                                          # van de lip van een helling af
-                self._takeoff(t, 150 + t.rise * 3.2 if t.rise > 40 else 0.0)
-                t.rise = 0.0
-            else:
-                t.z = g
-                t.rise = 0.0
-            wheelie = t.boosting and t.forward_speed > 70 and t.stun <= 0
-            target = 0.62 if wheelie else (t.pitch if t.stun > 0 else 0.0)
-            t.pitch += (target - t.pitch) * min(1.0, dt * 6)
-            if wheelie:
-                t.wheelie_t += dt
-                if random.random() < dt * 30:
-                    fx, fy = math.cos(t.heading), math.sin(t.heading)
-                    self.spawn(t.x - fx * 40, t.y - fy * 40, random.uniform(-30, 30), random.uniform(-30, 30),
-                               random.uniform(0.4, 0.8), random.uniform(6, 10), (215, 215, 220))
-            elif t.wheelie_t > 0:
-                if t.wheelie_t >= 0.8:
-                    t.score.n["wheelie"] += t.wheelie_t
-                    t.score.add(f"WHEELIE {t.wheelie_t:.1f}s", int(t.wheelie_t * 160), (120, 220, 255))
-                    self.play("lap", 0.6, t)
-                t.wheelie_t = 0.0
-        # muur
-        for ax, lo, hi, vk in (("x", m.x0 + 60, m.x1 - 60, "vx"), ("y", m.y0 + 60, m.y1 - 60, "vy")):
-            v = getattr(t, ax)
-            if v < lo or v > hi:
-                setattr(t, ax, clamp(v, lo, hi))
-                vel = getattr(t, vk)
-                if (v < lo and vel < 0) or (v > hi and vel > 0):
-                    setattr(t, vk, -vel * 0.35)
-                    if abs(vel) > 120:
-                        self.play("bump", clamp(abs(vel) / 400, 0.2, 0.9), t)
-                        if t.is_player:
-                            self.shake = max(self.shake, min(7, abs(vel) * 0.02))
-
-    def _effects(self, t, dt):
-        if not self.visible(t):
-            return
-        speed = math.hypot(t.vx, t.vy)
-        fx, fy = math.cos(t.heading), math.sin(t.heading)
-        rx, ry = -fy, fx
-        if not t.air and speed > 90 and random.random() < clamp(speed / 450, 0.1, 0.9):
-            for s in (-1, 1):
-                wx, wy = t.x - fx * 40 + rx * s * 30, t.y - fy * 40 + ry * s * 30
-                self.spawn(wx, wy, random.uniform(-30, 30) - t.vx * 0.1, random.uniform(-30, 30) - t.vy * 0.1,
-                           random.uniform(0.5, 0.9), random.uniform(6, 11), (208, 156, 100))
-        if t.mud and speed > 40:
-            self.burst(t.x, t.y, 2, (96, 64, 36), (40, 160), 0, (0.5, 0.9), (7, 12))
-        if t.boosting:
-            ex, ey = t.x - fx * 62, t.y - fy * 62
-            for _ in range(2):
-                self.spawn(ex + random.uniform(-3, 3), ey + random.uniform(-3, 3), -fx * random.uniform(140, 240) + t.vx * 0.3,
-                           -fy * random.uniform(140, 240) + t.vy * 0.3, random.uniform(0.12, 0.26), random.uniform(5, 9),
-                           random.choice([(255, 170, 60), (255, 230, 120), (255, 120, 40)]), 2)
-        if t.stun > 0 and random.random() < dt * 22:
-            self.spawn(t.x, t.y, random.uniform(-40, 40), random.uniform(-40, 40), random.uniform(0.6, 1.1), 10, (90, 90, 96))
-
-    def reset_truck(self):
-        """T: de speler-truck rechtop zetten."""
-        p = self.player
-        p.pitch = p.pw = p.vz = p.z = 0.0
-        p.air, p.air_T, p.stun = False, 0.0, 0.0
-        p.vx *= 0.3
-        p.vy *= 0.3
-
-    # ---- hoofdlogica
-    def update(self, dt, keys):
-        dt = min(dt, 0.05)
-        p, m = self.player, self.map
-        playing = self.state == "play"
-        if self.state == "countdown":
-            self.countdown -= dt
-            n_cd = math.ceil(max(self.countdown, 0))
-            if n_cd != self._cd_last:
-                self._cd_last = n_cd
-                if n_cd in (1, 2, 3):
-                    self.play("beep")
-            if self.countdown <= 0:
-                self.state, self.go_t = "play", 1.2
-                self.play("go")
-        else:
-            self.t_run += dt
-            self.go_t = max(0.0, self.go_t - dt)
-            if playing:
-                self.time_left -= dt
-                if self.time_left <= 0:
-                    self.time_left, self.state = 0.0, "finished"
-                    self.play("finish")
-        idle = (False, False, 0, False, False, 0)
-        for t in self.trucks:
-            if not playing:
-                inp = idle
-            elif t.is_player:
-                inp = self._input(keys)
-            else:
-                inp = next(b for b in self.bots if b.t is t).control(dt)
-            self._drive(t, dt, inp)
-        # truck <-> truck
-        tr = self.trucks
-        for i in range(len(tr)):
-            for j in range(i + 1, len(tr)):
-                a, b = tr[i], tr[j]
-                imp = collide(a, b, 84)
-                if imp > 40:
-                    self.burst((a.x + b.x) / 2, (a.y + b.y) / 2, int(min(10, imp / 25)), (255, 200, 90), (80, 260), 1, (0.2, 0.4), (2, 3))
-                    if a.is_player or b.is_player:
-                        self.shake = max(self.shake, min(8, imp * 0.03))
-                        self.play("hit", clamp(imp / 300, 0.3, 1.0))
-                    if imp > 260 and playing:                             # beuk: de snelste krijgt punten
-                        att = a if math.hypot(a.vx, a.vy) > math.hypot(b.vx, b.vy) else b
-                        if att.ram_cd <= 0:
-                            att.ram_cd = 1.5
-                            att.score.add("RAM!", 120, (255, 130, 90), chain=False)
-        # autowrakken: platrijden of overheen springen
-        for t in tr:
-            for j in self.junk:
-                d = math.hypot(t.x - j.x, t.y - j.y)
-                if d < 52:
-                    if t.air and t.z > 36 and id(j) not in t.info["over"] and not t.info["tiny"]:
-                        t.info["over"].add(id(j))
-                        t.info["cars"] += 1
-                    elif not t.air and not j.crushed and t.z < 26 and d < 46:
-                        j.crush()
-                        t.score.n["crushes"] += 1
-                        t.score.add("CRUSH!", 100, (255, 170, 80), chain=False)
-                        self.burst(j.x, j.y, 12, (200, 200, 205), (60, 220), 1, (0.2, 0.5), (2, 3.5))
-                        self.play("bump", 0.8, t)
-                        if t.is_player:
-                            self.shake = max(self.shake, 3)
-        for t in tr:
-            t.score.update(dt)
-            self._effects(t, dt)
-        damp = max(0.0, 1 - 3.2 * dt)
-        for q in self.particles:
-            q[0] += q[2] * dt
-            q[1] += q[3] * dt
-            q[4] += dt
-            if q[8] == 1:
-                q[2] *= damp
-                q[3] *= damp
-        self.particles = [q for q in self.particles if q[4] < q[5]][-600:]
-        self.shake *= max(0.0, 1 - 7 * dt)
-        self._audio(dt)
-        tx = p.x + p.vx * 0.3 - W / 2
-        ty = p.y + p.vy * 0.3 - H / 2 - max(0.0, p.z) * 0.45        # camera tilt mee met de hoogte
-        k = min(1, dt * 5)
-        self.cam_x = clamp(self.cam_x + (tx - self.cam_x) * k, 0, m.w - W)
-        self.cam_y = clamp(self.cam_y + (ty - self.cam_y) * k, 0, m.h - H)
-
-    def _audio(self, dt):
-        sfx = self.sfx
-        if not sfx or not sfx.ok:
-            return
-        p = self.player
-        spd = abs(p.forward_speed)
-        r = clamp(spd / (p.vmax * 1.1), 0.0, 1.0)
-        g = min(3, int(r * 4))
-        target = 0.25 + 0.75 * (r * 4 - g)
-        if p.boosting:
-            target = max(target, 0.7)
-        if p.air:
-            target = 0.95
-        self.rpm += (target - self.rpm) * min(1.0, dt * 9)
-        self.power += ((1.0 if p.boosting or p.air else 0.2) - self.power) * min(1.0, dt * 8)
-        dirt = 0.0 if p.air else clamp(spd / 400, 0.0, 1.0)
-        near = 0.0
-        for c in self.trucks:
-            if not c.is_player:
-                near = max(near, clamp(1 - math.hypot(c.x - p.x, c.y - p.y) / 700, 0, 1))
-        sfx.loops(self.rpm, self.power, p.boosting, clamp((p.slip - 70) / 160, 0, 0.8) * (0 if p.air else 1), dirt, near, 0.0)
-
-    # ---- tekenen
-    def draw_truck(self, screen, t, cx, cy):
-        sx, sy = t.x - cx, t.y - cy
-        if not (-240 < sx < W + 240 and -240 < sy < H + 240):
-            return
-        art = t.art
-        z = max(0.0, t.z)
-        ang = -math.degrees(t.heading)
-        sh = pygame.transform.rotozoom(art.shadow, ang, max(0.5, 1 - z / 520))
-        sh.set_alpha(int(255 * max(0.3, 1 - z / 400)))
-        screen.blit(sh, sh.get_rect(center=(sx + 8 + z * 0.25, sy + 10 + z * 0.25)))
-        img = art.proj(t.pitch)
-        k = min(1.9, 1 + z / 420) * (1 + 0.1 * abs(math.sin(t.pitch)))
-        rot = pygame.transform.rotozoom(img, ang, k)
-        lift = z * 0.5 + abs(math.sin(t.pitch)) * 16
-        screen.blit(rot, rot.get_rect(center=(sx, sy - lift)))
-
-    def draw(self, screen, A):
-        m, p = self.map, self.player
-        sx = sy = 0.0
-        if self.shake > 0.3:
-            sx, sy = random.uniform(-self.shake, self.shake), random.uniform(-self.shake, self.shake)
-        cx = int(clamp(self.cam_x + sx, 0, m.w - W))
-        cy = int(clamp(self.cam_y + sy, 0, m.h - H))
-        screen.blit(m.world, (0, 0), pygame.Rect(cx, cy, W, H))
-        for j in self.junk:
-            j.draw(screen, cx, cy)
-        fx = pygame.Surface((W, H), pygame.SRCALPHA)
-        for x, y, _, _, age, life, size, col, kind in self.particles:
-            px, py = int(x - cx), int(y - cy)
-            if not (-30 < px < W + 30 and -30 < py < H + 30):
-                continue
-            u = age / life
-            if kind == 0:
-                pygame.draw.circle(fx, (*col, int(150 * (1 - u))), (px, py), int(size * (1 + u * 1.6)))
-            elif kind == 1:
-                pygame.draw.circle(fx, (*col, int(255 * (1 - u))), (px, py), max(1, int(size * (1 - u * 0.6))))
-            else:
-                pygame.draw.circle(fx, (*col, int(230 * (1 - u))), (px, py), max(1, int(size * (1 - u * 0.7))))
-        screen.blit(fx, (0, 0))
-        for t in sorted(self.trucks, key=lambda t: (t.z, t.is_player)):
-            self.draw_truck(screen, t, cx, cy)
-        f = A["afonts"]
-        for t in self.trucks:                                             # punten van bots zweven boven hun truck
-            if not t.is_player and t.score.events:
-                title, txt, col, age = t.score.events[-1]
-                if age < 1.6 and self.visible(t, 0):
-                    a = int(255 * clamp(1.6 - age, 0, 1))
-                    img = f["s"].render(f"{title}  {txt}", True, col)
-                    img.set_alpha(a)
-                    screen.blit(img, img.get_rect(midbottom=(t.x - cx, t.y - cy - 70 - t.z * 0.5 - age * 28)))
-        for t in self.trucks:                                             # namen
-            if not t.is_player and self.visible(t, 0):
-                text(screen, f["s"], t.name, (t.x - cx, t.y - cy - 56 - t.z * 0.5), (255, 214, 160), "midbottom")
-        self._hud(screen, A)
-
-    def _hud(self, screen, A):
-        f = A["afonts"]
-        p, sc = self.player, self.player.score
-        # score + combo
-        apanel(screen, (20, 20, 330, 124))
-        text(screen, f["s"], "SCORE", (38, 28), (255, 170, 60))
-        text(screen, f["l"], f"{sc.total:,}".replace(",", "."), (38, 44), (255, 240, 200))
-        text(screen, f["s"], f"COMBO  x{sc.mult:.1f}" if sc.chain else "COMBO  -", (38, 106),
-             (255, 214, 80) if sc.chain else (160, 130, 100))
-        if sc.chain:
-            pygame.draw.rect(screen, (50, 30, 12), (190, 112, 140, 10), border_radius=5)
-            pygame.draw.rect(screen, (255, 190, 40), (190, 112, int(140 * clamp(sc.chain_t / 5, 0, 1)), 10), border_radius=5)
-        # tijd
-        apanel(screen, (W // 2 - 90, 20, 180, 70))
-        tl = max(0, math.ceil(self.time_left))
-        text(screen, f["s"], "TIJD", (W // 2, 26), (255, 170, 60), "midtop")
-        text(screen, f["m"], f"{tl // 60}:{tl % 60:02d}", (W // 2, 46), (255, 80, 60) if tl <= 10 else (255, 240, 200), "midtop")
-        # rechts: stand (battle) of beste stunt (freestyle)
-        if self.mode == 1:
-            order = self.ranking()
-            apanel(screen, (W - 290, 20, 270, 40 + 28 * len(order)))
-            text(screen, f["s"], "STAND", (W - 270, 26), (255, 170, 60))
-            for i, t in enumerate(order):
-                col = (255, 220, 70) if t.is_player else (230, 220, 210)
-                pygame.draw.circle(screen, t.color, (W - 266, 74 + i * 28), 7)
-                text(screen, f["s"], f"{i + 1}. {t.name}", (W - 252, 64 + i * 28), col)
-                text(screen, f["s"], f"{t.score.total:,}".replace(",", "."), (W - 34, 64 + i * 28), col, "topright")
-        else:
-            apanel(screen, (W - 330, 20, 310, 74))
-            text(screen, f["s"], "BESTE STUNT", (W - 312, 26), (255, 170, 60))
-            b = sc.best
-            text(screen, f["s"], f"{b[1]}  +{b[0]:,}".replace(",", ".") if b[0] else "-", (W - 312, 56), (255, 240, 200))
-        # live stuntinfo in de lucht
-        if p.air and p.info and not p.info["tiny"]:
-            info = p.info
-            nb, nf = (info["back"] + 0.9) // TAU, (info["front"] + 0.9) // TAU
-            bits = [f"LUCHT {info['t']:.1f}s"]
-            if nb:
-                bits.append(flip_name("BACKFLIP", int(nb)))
-            if nf:
-                bits.append(flip_name("FRONTFLIP", int(nf)))
-            if abs(info["spin"]) > 5.3:
-                bits.append(f"{int((abs(info['spin']) + 1.0) // TAU) * 360} SPIN")
-            if info["cars"]:
-                bits.append(f"{info['cars']} AUTO'S")
-            text(screen, f["m"], "   ".join(bits), (W // 2, 120), (120, 230, 255), "midtop")
-        elif p.wheelie_t > 0.3:
-            text(screen, f["m"], f"WHEELIE  {p.wheelie_t:.1f}s", (W // 2, 120), (120, 230, 255), "midtop")
-        # nitro
-        bw, bh = 300, 18
-        bx, by = W // 2 - bw // 2, H - 52
-        apanel(screen, (bx - 12, by - 28, bw + 24, bh + 42), 170)
-        text(screen, f["s"], "NITRO / WHEELIE  (SHIFT)", (W // 2, by - 24), (255, 170, 60), "midtop", False)
-        pygame.draw.rect(screen, (40, 24, 10), (bx, by, bw, bh), border_radius=9)
-        frac = p.nitro / p.nitro_cap
-        if frac > 0.01:
-            pygame.draw.rect(screen, (255, 230, 120) if p.boosting else (255, 140, 30), (bx, by, max(8, int(bw * frac)), bh), border_radius=9)
-        pygame.draw.rect(screen, (255, 200, 120), (bx, by, bw, bh), 2, border_radius=9)
-        # snelheidsmeter
-        dx, dy = W - 220, H - 220
-        screen.blit(self.dial, (dx, dy))
-        kmh = clamp(abs(p.forward_speed) * 0.5, 0, 300)
-        ang = math.radians(135 + 270 * kmh / 300)
-        c = 100
-        pygame.draw.line(screen, (255, 90, 70), (dx + c, dy + c), (dx + c + math.cos(ang) * 72, dy + c + math.sin(ang) * 72), 4)
-        pygame.draw.circle(screen, (30, 32, 40), (dx + c, dy + c), 9)
-        pygame.draw.circle(screen, (255, 255, 255), (dx + c, dy + c), 9, 2)
-        text(screen, f["m"], f"{kmh:.0f}", (dx + c, dy + 140), anchor="midtop")
-        text(screen, f["s"], "km/h", (dx + c, dy + 172), (160, 175, 200), "midtop")
-        # meldingen in het midden
-        y = 170
-        for title, txt, col, age in reversed(sc.events[-3:]):
-            a = clamp(min(age / 0.12, (2.6 - age) / 0.6), 0, 1)
-            pop = 1 + 0.35 * max(0.0, 1 - age / 0.18)
-            img = f["l" if len(title) <= 18 else "m"].render(title, True, col)
-            if pop > 1.01:
-                img = pygame.transform.smoothscale(img, (int(img.get_width() * pop), int(img.get_height() * pop)))
-            img.set_alpha(int(255 * a))
-            screen.blit(img, img.get_rect(midtop=(W // 2, y)))
-            sub = f["m"].render(txt, True, (255, 240, 210))
-            sub.set_alpha(int(255 * a))
-            screen.blit(sub, sub.get_rect(midtop=(W // 2, y + img.get_height() - 2)))
-            y += img.get_height() + sub.get_height() + 4
-            if y > 420:
-                break
-        if self.state == "countdown" or (self.state == "play" and self.go_t > 0):
-            apanel(screen, (W // 2 - 110, 150, 220, 80))
-            lit = (3 - math.ceil(max(self.countdown, 0)) + 1) if self.state == "countdown" else 3
-            for i in range(3):
-                col = (50, 40, 36)
-                if self.state == "play":
-                    col = (60, 230, 90)
-                elif i < lit:
-                    col = (240, 40, 40)
-                pygame.draw.circle(screen, col, (W // 2 - 60 + i * 60, 190), 22)
-                pygame.draw.circle(screen, (0, 0, 0), (W // 2 - 60 + i * 60, 190), 22, 3)
-            if self.state == "play":
-                text(screen, f["xl"], "GO!", (W // 2, 250), (110, 255, 140), "midtop")
-        if self.state == "play" and self.t_run < 12:
-            apanel(screen, (20, H - 186, 800, 96), 190)
-            text(screen, f["s"], "Pijltjes/WASD rijden   SPATIE hop   SHIFT nitro + WHEELIE   ESC pauze   T terugzetten",
-                 (36, H - 178), (255, 220, 170), shadow=False)
-            text(screen, f["s"], "In de lucht:  OMHOOG = frontflip   OMLAAG = backflip   LINKS/RECHTS = draaien",
-                 (36, H - 150), (255, 220, 170), shadow=False)
-            text(screen, f["s"], "Land op je wielen! Meer flips + draaien in een sprong = veel meer punten.",
-                 (36, H - 122), (255, 190, 90), shadow=False)
-
-
-
 # ------------------------------------------------------------------ muis-interface
 class UI:
     """Eenvoudige 'immediate mode' knoppen: tekenen en tegelijk registreren voor klikken."""
@@ -4553,11 +3374,6 @@ class UI:
 def make_assets():
     def font(sz, bold=True):
         return pygame.font.SysFont("segoeui,arial,helvetica", sz, bold=bold)
-
-    def afont(sz):                                   # zware 'stadion'-letters voor de arena
-        if pygame.font.match_font("impact"):
-            return pygame.font.SysFont("impact", sz)
-        return pygame.font.SysFont("arialblack,franklingothicheavy,segoeuiblack,arial", sz, bold=True)
     GLOW["red"] = make_glow(44, (255, 40, 30), 2.0)
     GLOW["red_dim"] = make_glow(34, (150, 16, 12), 2.0)
     GLOW["neon"] = make_glow(120, (0, 70, 120), 2.0)
@@ -4568,7 +3384,6 @@ def make_assets():
     ART = CarArt()
     return {
         "fonts": {"xs": font(15), "s": font(18), "m": font(28), "l": font(46), "xl": font(84)},
-        "afonts": {"xs": afont(16), "s": afont(21), "m": afont(32), "l": afont(54), "xl": afont(88)},
         "vignette": make_vignette(),
         "menu_bg": make_menu_bg(),
     }
@@ -4576,9 +3391,8 @@ def make_assets():
 
 # ------------------------------------------------------------------ applicatie
 CARD_COLORS = [(226, 45, 90), (255, 165, 40), (255, 84, 18), (30, 190, 170), (140, 110, 255)]
-CARD_NAMES = ["SNELLE RACE", "GRAND PRIX", "ARENA", "GARAGE", "INSTELLINGEN"]
-CARD_SUBS = ["Race tegen de bots", "Kampioenschap met punten", "Monstertrucks en stunts", "Kies en tune je auto",
-             "Scherm en besturing"]
+CARD_NAMES = ["SNELLE RACE", "GRAND PRIX", "GARAGE", "INSTELLINGEN"]
+CARD_SUBS = ["Race tegen de bots", "Kampioenschap met punten", "Kies en tune je auto", "Scherm en besturing"]
 CARD_W_ACTIVE, CARD_W_IDLE = 400.0, 172.0
 
 
@@ -4607,13 +3421,8 @@ class App:
         self.hue_drag = False
         self.drag = None                    # regelaar die nu versleept wordt: (sleutel, rechthoek, min, max)
         self.menu_active = 0
-        self.card_w = [CARD_W_ACTIVE] + [CARD_W_IDLE] * 4
-        self.card_heat = [1.0, 0.0, 0.0, 0.0, 0.0]
-        self.arena = None
-        self.arena_done = False
-        self.arena_result = None
-        self.fx = ArenaFX()
-        self.arena_glow = soft_light(250, (255, 140, 30), 110)
+        self.card_w = [CARD_W_ACTIVE] + [CARD_W_IDLE] * 3
+        self.card_heat = [1.0, 0.0, 0.0, 0.0]
         self.confirm_reset = False
         self.confetti = Confetti()
         self.streaks = [[random.uniform(0, W), random.uniform(0, H), random.uniform(60, 220),
@@ -4669,7 +3478,7 @@ class App:
         pygame.display.toggle_fullscreen()
 
     def menu_action(self, i):
-        [lambda: self.open_setup("race"), lambda: self.open_setup("gp"), self.open_arena,
+        [lambda: self.open_setup("race"), lambda: self.open_setup("gp"),
          lambda: self.open_garage("main"), lambda: self.goto("settings")][i]()
 
     def reset_save(self):
@@ -4783,15 +3592,13 @@ class App:
             elif key == pygame.K_2:
                 self.open_setup("gp")
             elif key == pygame.K_3:
-                self.open_arena()
-            elif key == pygame.K_4:
                 self.open_garage("main")
-            elif key == pygame.K_5:
+            elif key == pygame.K_4:
                 self.goto("settings")
             elif key == pygame.K_LEFT:
-                self.menu_active = (self.menu_active - 1) % 5
+                self.menu_active = (self.menu_active - 1) % 4
             elif key == pygame.K_RIGHT:
-                self.menu_active = (self.menu_active + 1) % 5
+                self.menu_active = (self.menu_active + 1) % 4
             elif enter:
                 self.menu_action(self.menu_active)
             elif key == pygame.K_s:
@@ -4805,7 +3612,7 @@ class App:
         elif st == "setup":
             if key == pygame.K_ESCAPE:
                 self.goto("main")
-            elif key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5):
+            elif key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4):
                 self.set_level(key - pygame.K_0)
             elif key == pygame.K_n:
                 self.new_preview()
@@ -4833,31 +3640,6 @@ class App:
                 r.respawn(r.player)
             elif enter and r.state == "finished":
                 self.results_continue()
-        elif st == "arena_hub":
-            if key == pygame.K_ESCAPE:
-                self.goto("main")
-            elif enter or key == pygame.K_SPACE:
-                self.start_arena()
-            elif key in (pygame.K_g, pygame.K_b):
-                self.goto("arena_garage")
-        elif st == "arena_garage":
-            if key == pygame.K_ESCAPE or enter:
-                self.goto("arena_hub")
-        elif st == "arena":
-            a = self.arena
-            if key == pygame.K_ESCAPE:
-                if a.state == "finished":
-                    self.leave_arena()
-                else:
-                    self.set_pause(not self.paused)
-            elif key == pygame.K_r:
-                self.start_arena()
-            elif key == pygame.K_m:
-                self.leave_arena()
-            elif key == pygame.K_t and a.state == "play" and not self.paused:
-                a.reset_truck()
-            elif enter and a.state == "finished":
-                self.start_arena()
         elif st == "gp_standings":
             if enter or key == pygame.K_SPACE:
                 self.next_gp_race()
@@ -4885,257 +3667,6 @@ class App:
         if was != kind(v):                          # snelweg / Tokyo / gewoon circuit: ander soort voorbeeld nodig
             self.new_preview()
 
-    # ================================================================ ARENA
-    def open_arena(self):
-        self.goto("arena_hub")
-
-    def start_arena(self):
-        write_save(self.save)
-        self.show_loading("Arena bouwen...")
-        self.sfx.stop_loops()
-        self.arena = Arena(self.save, self.sfx)
-        self.arena_done = False
-        self.arena_result = None
-        self.state = "arena"
-        self.paused = False
-        self.sfx.set_paused(False)
-
-    def leave_arena(self):
-        self.sfx.stop_loops()
-        self.arena = None
-        self.paused = False
-        self.goto("arena_hub")
-
-    def finish_arena(self):
-        """Tijd is om: highscore en beste stunt bijhouden."""
-        a, hs = self.arena, self.save["hs"]
-        self.arena_done = True
-        key = "battle" if a.mode == 1 else "free"
-        score = a.player.score.total
-        lst = sorted(hs[key] + [score], reverse=True)
-        pos = lst.index(score) + 1
-        hs[key] = lst[:5]
-        best = a.player.score.best
-        new_stunt = best[0] > hs["stunt"]
-        if new_stunt:
-            hs["stunt"], hs["stunt_name"] = best[0], best[1]
-        self.arena_result = dict(rank=pos if (pos <= 5 and score > 0) else None, new_stunt=new_stunt)
-        write_save(self.save)
-        self.sfx.stop_loops()
-
-    def set_arena_mode(self, v):
-        self.save["arena_mode"] = v
-
-    # ---- truck bouwen
-    def truck_cycle(self, key, d, n):
-        tr = self.save["truck"]
-        tr[key] = (tr[key] + d) % n
-
-    def truck_set(self, key, v):
-        self.save["truck"][key] = v
-
-    def truck_tune(self, i, d):
-        st = self.save["truck"]["stats"]
-        st[i] = int(clamp(st[i] + d, 0, STAT_MAX))
-
-    def truck_random(self):
-        self.save["truck"] = random_truck_cfg()
-
-    def truck_reset(self):
-        self.save["truck"] = json.loads(json.dumps(DEFAULTS["truck"]))
-
-    # ---- schermen
-    def arena_title(self, big, small, x, y):
-        f = self.A["afonts"]
-        for dx, col in ((6, (120, 40, 0)), (3, (210, 90, 10))):
-            text(self.screen, f["xl"], big, (x + dx, y + dx), col, shadow=False)
-        text(self.screen, f["xl"], big, (x, y), (255, 214, 60), shadow=False)
-        text(self.screen, f["s"], small, (x + 4, y + 80), (255, 150, 50), shadow=False)
-
-    def draw_truck_stage(self, rect, scale=1.6):
-        scr = self.screen
-        r = pygame.Rect(rect)
-        apanel(scr, r, 175, 18)
-        scr.blit(self.arena_glow, self.arena_glow.get_rect(center=r.center))
-        art = get_truck_art(self.save["truck"])
-        img = pygame.transform.rotozoom(art.top, (self.now * 34) % 360, scale)
-        sh = pygame.transform.rotozoom(art.shadow, (self.now * 34) % 360, scale)
-        c = (r.centerx, r.centery + int(math.sin(self.now * 2) * 4))
-        scr.blit(sh, sh.get_rect(center=(c[0] + 10, c[1] + 14)))
-        scr.blit(img, img.get_rect(center=c))
-
-    def draw_arena_hub(self):
-        scr, f, ui, s = self.screen, self.A["afonts"], self.ui, self.save
-        self.fx.draw(scr, self.now, self.dt)
-        self.arena_title("ARENA", "MONSTER TRUCK STUNT ARENA", 60, 28)
-        self.draw_truck_stage((60, 128, 520, 290))
-        text(scr, f["s"], f"{TRUCK_STYLES[s['truck']['style']].upper()}  -  {TRUCK_DECALS[s['truck']['decal']].upper()}",
-             (80, 138), (255, 170, 60), shadow=False)
-        ui.button(scr, (60, 430, 520, 62), "TRUCK BOUWEN", lambda: self.goto("arena_garage"), accent=(255, 200, 30))
-        apanel(scr, (60, 506, 520, 92), 170)
-        text(scr, f["xs"], "Pijltjes/WASD rijden   SPATIE hop   SHIFT nitro = wheelie", (76, 516), (255, 214, 160), shadow=False)
-        text(scr, f["xs"], "In de lucht:  OMHOOG frontflip,  OMLAAG backflip,", (76, 542), (255, 214, 160), shadow=False)
-        text(scr, f["xs"], "LINKS/RECHTS draaien.  Land op je wielen!", (76, 568), (255, 214, 160), shadow=False)
-        ui.button(scr, (60, 614, 200, 56), "TERUG", lambda: self.goto("main"), font="s")
-
-        x = 620
-        mode = s["arena_mode"]
-        text(scr, f["s"], "SPELMODUS", (x, 132), (255, 150, 50), shadow=False)
-        for i, nm in enumerate(ARENA_MODES):
-            ui.button(scr, (x + i * 310, 158, 300, 64), nm, lambda i=i: self.set_arena_mode(i), selected=mode == i)
-        desc = ("Haal de hoogste score met stunts, tegen de klok."
-                if mode == 0 else "Stunt tegen bots: de meeste punten wint!")
-        text(scr, f["s"], desc, (x, 232), (255, 214, 160), shadow=False)
-        text(scr, f["s"], "TIJD", (x, 268), (255, 150, 50), shadow=False)
-        self.stepper(x, 292, "arena_time", ARENA_TIME_MIN, ARENA_TIME_MAX,
-                     lambda v: f"{v // 60}:{v % 60:02d}", step=30)
-        if mode == 1:
-            text(scr, f["s"], "TEGENSTANDERS", (x + 310, 268), (255, 150, 50), shadow=False)
-            self.stepper(x + 310, 292, "arena_bots", 1, ARENA_MAX_BOTS, lambda v: f"{v} bot" if v == 1 else f"{v} bots")
-        else:
-            text(scr, f["s"], "SOLO", (x + 310, 268), (255, 150, 50), shadow=False)
-            text(scr, f["m"], "jij tegen de klok", (x + 310 + 150, 320), (200, 170, 130), "center", False)
-        # highscores
-        apanel(scr, (x, 366, 610, 226), 175)
-        text(scr, f["s"], f"HIGHSCORES  -  {ARENA_MODES[mode]}", (x + 22, 378), (255, 200, 60), shadow=False)
-        lst = s["hs"]["battle" if mode == 1 else "free"]
-        for i in range(5):
-            yy = 410 + i * 30
-            sc = lst[i] if i < len(lst) else None
-            text(scr, f["s"], f"{i + 1}.", (x + 26, yy), (255, 170, 60), shadow=False)
-            text(scr, f["m"], f"{sc:,}".replace(",", ".") if sc is not None else "-", (x + 70, yy - 6),
-                 (255, 240, 200) if sc is not None else (110, 90, 70), shadow=False)
-        text(scr, f["s"], "BESTE STUNT", (x + 22, 562), (255, 170, 60), shadow=False)
-        hs = s["hs"]
-        text(scr, f["xs"], f"{hs['stunt_name'][:30]}  +{hs['stunt']:,}".replace(",", ".") if hs["stunt"] else "nog geen stunt",
-             (x + 190, 565), (255, 240, 200) if hs["stunt"] else (110, 90, 70), shadow=False)
-        ui.button(scr, (x, 606, 610, 68), "START", self.start_arena, accent=(255, 200, 30))
-
-    def draw_arena_garage(self):
-        scr, f, ui = self.screen, self.A["afonts"], self.ui
-        tr = self.save["truck"]
-        self.fx.draw(scr, self.now, self.dt)
-        text(scr, f["l"], "TRUCK BOUWEN", (60, 24), (255, 214, 60), shadow=False)
-        self.draw_truck_stage((60, 100, 500, 300), 1.7)
-        prm = truck_params(tr)
-        hop_h = prm["hop"] ** 2 / (2 * GRAV) / 10
-        apanel(scr, (60, 414, 500, 52), 170)
-        text(scr, f["s"], f"{prm['vmax'] * 0.5:.0f} km/h   hop {hop_h:.0f} m   flip {TAU / prm['flip']:.2f}s   nitro {prm['nitro']:.0f}",
-             (310, 440), (255, 214, 160), "center", False)
-        ui.button(scr, (60, 480, 240, 48), "WILLEKEURIG", self.truck_random, font="s")
-        ui.button(scr, (320, 480, 240, 48), "RESET", self.truck_reset, font="s")
-        ui.button(scr, (60, 600, 400, 60), "OPSLAAN & TERUG", lambda: self.goto("arena_hub"), accent=(255, 200, 30))
-
-        x = 600
-
-        def selector(y, label, val, key, n):
-            text(scr, f["s"], label, (x, y + 10), (255, 150, 50), shadow=False)
-            ui.button(scr, (x + 190, y, 46, 46), "<", lambda: self.truck_cycle(key, -1, n), font="s")
-            pygame.draw.rect(scr, ui.theme["field"], (x + 244, y, 260, 46), border_radius=10)
-            pygame.draw.rect(scr, ui.theme["field_border"], (x + 244, y, 260, 46), 2, border_radius=10)
-            text(scr, f["m"], val, (x + 374, y + 23), (255, 240, 200), "center", False)
-            ui.button(scr, (x + 512, y, 46, 46), ">", lambda: self.truck_cycle(key, 1, n), font="s")
-
-        selector(104, "STIJL", TRUCK_STYLES[tr["style"]], "style", len(TRUCK_STYLES))
-        text(scr, f["s"], "KLEUR", (x, 170), (255, 150, 50), shadow=False)
-        for i, c in enumerate(PALETTE):
-            ui.swatch(scr, (x + 190 + (i % 6) * 60, 160 + (i // 6) * 40, 50, 32), c, tr["color"] == i,
-                      lambda i=i: self.truck_set("color", i))
-        text(scr, f["s"], "ACCENT", (x, 250), (255, 150, 50), shadow=False)
-        for i, c in enumerate(ACCENTS):
-            ui.swatch(scr, (x + 190 + (i % 8) * 46, 246, 40, 32), c, tr["accent"] == i,
-                      lambda i=i: self.truck_set("accent", i))
-        selector(296, "STICKERS", TRUCK_DECALS[tr["decal"]], "decal", len(TRUCK_DECALS))
-        selector(352, "WIELEN", TRUCK_WHEELS[tr["wheels"]], "wheels", len(TRUCK_WHEELS))
-        text(scr, f["s"], "DAKLAMPEN", (x, 418), (255, 150, 50), shadow=False)
-        ui.button(scr, (x + 190, 408, 200, 46), "AAN" if tr["lights"] else "UIT",
-                  lambda: self.truck_set("lights", 0 if tr["lights"] else 1), selected=bool(tr["lights"]), font="s")
-
-        text(scr, f["s"], "TUNING", (x, 466), (255, 214, 60), shadow=False)
-        st = tr["stats"]
-        effects = [f"{prm['vmax'] * 0.5:.0f} km/h", f"{hop_h:.0f} m", f"{TAU / prm['flip']:.2f} s", f"{prm['nitro']:.0f}"]
-        for i, name in enumerate(TRUCK_STATS):
-            y = 490 + i * 44
-            text(scr, f["s"], name, (x, y + 8), (255, 236, 210), shadow=False)
-            ui.button(scr, (x + 190, y, 38, 38), "-", lambda i=i: self.truck_tune(i, -1), enabled=st[i] > 0, font="s")
-            for sg in range(STAT_MAX):
-                r = pygame.Rect(x + 236 + sg * 22, y + 5, 18, 28)
-                on = sg < st[i]
-                pygame.draw.rect(scr, (255, 160, 30) if on else (40, 28, 16), r, border_radius=5)
-                pygame.draw.rect(scr, (255, 230, 170) if on else (110, 80, 44), r, 2, border_radius=5)
-            ui.button(scr, (x + 236 + STAT_MAX * 22 + 4, y, 38, 38), "+", lambda i=i: self.truck_tune(i, 1),
-                      enabled=st[i] < STAT_MAX, font="s")
-            text(scr, f["s"], effects[i], (x + 630, y + 19), (255, 214, 160), "midright", False)
-
-    def draw_arena(self):
-        a = self.arena
-        a.draw(self.screen, self.A)
-        if a.state == "finished":
-            self.draw_arena_results()
-        if self.paused:
-            self.draw_arena_pause()
-
-    def draw_arena_pause(self):
-        scr, f, ui = self.screen, self.A["afonts"], self.ui
-        self.dim(170)
-        apanel(scr, (W // 2 - 220, 170, 440, 380), 235)
-        text(scr, f["l"], "PAUZE", (W // 2, 190), (255, 214, 60), "midtop", False)
-        ui.button(scr, (W // 2 - 190, 280, 380, 64), "HERVATTEN", lambda: self.set_pause(False), accent=(255, 200, 30))
-        ui.button(scr, (W // 2 - 190, 358, 380, 64), "OPNIEUW", self.start_arena)
-        ui.button(scr, (W // 2 - 190, 436, 380, 64), "NAAR ARENA-MENU", self.leave_arena)
-
-    def draw_arena_results(self):
-        scr, f, ui, a = self.screen, self.A["afonts"], self.ui, self.arena
-        res = self.arena_result or {}
-        self.dim(150)
-        cx = W // 2
-        apanel(scr, (cx - 340, 50, 680, 630), 238)
-        text(scr, f["m"], "TIJD OP!", (cx, 62), (255, 214, 60), "midtop", False)
-        p = a.player
-        sc = p.score
-        if a.mode == 0:
-            text(scr, f["s"], "JOUW SCORE", (cx, 128), (255, 150, 50), "midtop", False)
-            text(scr, f["xl"], f"{sc.total:,}".replace(",", "."), (cx, 148), (255, 240, 200), "midtop", False)
-            if res.get("rank"):
-                msg = "NIEUWE HIGHSCORE!" if res["rank"] == 1 else f"PLAATS {res['rank']} IN DE HIGHSCORES"
-                text(scr, f["m"], msg, (cx, 262), (120, 255, 150), "midtop", False)
-            y0 = 312
-        else:
-            order = a.ranking()
-            rank = order.index(p) + 1
-            text(scr, f["l"], "GEWONNEN!" if rank == 1 else f"PLAATS {rank}", (cx, 100),
-                 (120, 255, 150) if rank == 1 else (255, 170, 120), "midtop", False)
-            for i, t in enumerate(order):
-                y = 188 + i * 34
-                if t.is_player:
-                    hl = pygame.Surface((620, 32), pygame.SRCALPHA)
-                    pygame.draw.rect(hl, (255, 200, 40, 50), hl.get_rect(), border_radius=8)
-                    scr.blit(hl, (cx - 310, y - 3))
-                text(scr, f["s"], f"{i + 1}.", (cx - 290, y), (255, 170, 60), shadow=False)
-                pygame.draw.circle(scr, t.color, (cx - 246, y + 12), 8)
-                text(scr, f["m"], t.name, (cx - 226, y - 5), (255, 236, 200), shadow=False)
-                text(scr, f["xs"], t.score.best[1][:18], (cx - 90, y + 4), (190, 160, 120), shadow=False)
-                text(scr, f["m"], f"{t.score.total:,}".replace(",", "."), (cx + 296, y - 5), (255, 240, 200), "topright", False)
-            y0 = 188 + len(order) * 34 + 14
-            if res.get("rank"):
-                text(scr, f["s"], "Je score staat in de highscores!", (cx, y0 - 8), (120, 255, 150), "midtop", False)
-                y0 += 22
-        b = sc.best
-        text(scr, f["s"], "BESTE STUNT", (cx - 300, y0), (255, 150, 50), shadow=False)
-        text(scr, f["s"], f"{b[1]}  +{b[0]:,}".replace(",", ".") if b[0] else "-", (cx - 300, y0 + 26), (255, 240, 200), shadow=False)
-        if res.get("new_stunt"):
-            text(scr, f["s"], "NIEUW RECORD!", (cx + 300, y0), (120, 255, 150), "topright", False)
-        n = sc.n
-        stats = [("Flips", str(n["flips"])), ("360-draaien", str(n["spins"])), ("Wheelie", f"{n['wheelie']:.1f}s"),
-                 ("Auto's platgereden", str(n["crushes"])), ("Over auto's gesprongen", str(n["cars"])), ("Crashes", str(n["crashes"]))]
-        for i, (k, v) in enumerate(stats):
-            xx = cx - 300 + (i % 2) * 320
-            yy = y0 + 70 + (i // 2) * 30
-            text(scr, f["s"], k, (xx, yy), (200, 175, 140), shadow=False)
-            text(scr, f["s"], v, (xx + 290, yy), (255, 240, 200), "topright", False)
-        ui.button(scr, (cx - 320, 600, 310, 64), "OPNIEUW", self.start_arena, accent=(255, 200, 30))
-        ui.button(scr, (cx + 10, 600, 310, 64), "ARENA-MENU", self.leave_arena)
-
     # ---- hoofdlus
     def run(self):
         while True:
@@ -5151,11 +3682,7 @@ class App:
             pygame.display.flip()
 
     def update(self, dt):
-        if self.state == "arena" and self.arena and not self.paused:
-            self.arena.update(dt, pygame.key.get_pressed())
-            if self.arena.state == "finished" and not self.arena_done:
-                self.finish_arena()
-        elif self.state == "race" and self.race and not self.paused:
+        if self.state == "race" and self.race and not self.paused:
             self.race.update(dt, pygame.key.get_pressed())
         elif self.state == "gp_final":
             champ = max(self.gp["points"], key=self.gp["points"].get)
@@ -5163,16 +3690,9 @@ class App:
 
     def draw(self):
         st = self.state
-        arena_ui = st.startswith("arena")
-        self.ui.f = self.A["afonts"] if arena_ui else self.f
-        self.ui.theme = THEME_ARENA if arena_ui else THEME_DEFAULT
-        if st == "arena":
-            self.draw_arena()
-        elif st == "arena_hub":
-            self.draw_arena_hub()
-        elif st == "arena_garage":
-            self.draw_arena_garage()
-        elif st == "race":
+        self.ui.f = self.f
+        self.ui.theme = THEME_DEFAULT
+        if st == "race":
             self.draw_race()
         elif st == "main":
             self.draw_main()
@@ -5272,18 +3792,7 @@ class App:
                                              (cx + 12, cy + 32), (cx + 8, cy + 32)])
             pygame.draw.rect(surf, gold, (cx - 9, cy + 32, 18, 30))
             pygame.draw.rect(surf, dark, (cx - 40, cy + 62, 80, 16), border_radius=4)
-        elif i == 2:                                                 # arena: monstertruck met vlammen
-            art = get_truck_art(self.save["truck"])
-            k = min(1.5, (w - 10) / TRUCK_L)
-            img = pygame.transform.rotozoom(art.top, 16, k)
-            img.set_alpha(int(110 + 145 * heat))
-            glow = tone((255, 150, 30))
-            pygame.draw.ellipse(surf, mix(top, (0, 0, 0), 0.45), (cx - int(TRUCK_L * k * 0.42), cy + 52, int(TRUCK_L * k * 0.84), 22))
-            for n in range(6):                                       # vlammen onder de truck
-                fx = cx - 70 + n * 28
-                pygame.draw.polygon(surf, glow, [(fx - 12, cy + 76), (fx, cy + 36 - (n % 2) * 14), (fx + 12, cy + 76)])
-            surf.blit(img, img.get_rect(center=(cx, cy)))
-        elif i == 3:                                                 # garage: tandwiel
+        elif i == 2:                                                 # garage: tandwiel
             ring = tone((200, 255, 245))
             pts = []
             for n in range(48):
@@ -5330,7 +3839,7 @@ class App:
                 self.menu_active = i
             x += w + gap
         k = min(1.0, self.dt * 10)
-        for i in range(5):
+        for i in range(4):
             tw = CARD_W_ACTIVE if i == self.menu_active else CARD_W_IDLE
             self.card_w[i] += (tw - self.card_w[i]) * k
             self.card_heat[i] += ((1.0 if i == self.menu_active else 0.0) - self.card_heat[i]) * k
@@ -5346,7 +3855,7 @@ class App:
         text(scr, f["s"], f"Auto {s['car']['model'] + 1}   -   {s['bots']} tegenstander(s)   -   "
                           f"{ENV_NAMES[s['env']]}   -   {'Regen' if s['weather'] else 'Droog'}{extra}",
              (72, 606), (190, 170, 182))
-        text(scr, f["s"], "Klik op een kaart, of gebruik pijltjes + ENTER   -   1-5 snelkeuze",
+        text(scr, f["s"], "Klik op een kaart, of gebruik pijltjes + ENTER   -   1-4 snelkeuze",
              (72, H - 44), (140, 116, 128))
         ui.button(scr, (W - 250, H - 70, 180, 46), "AFSLUITEN", self.quit, font="s")
 
@@ -5478,7 +3987,7 @@ class App:
         else:
             text(scr, f["s"], f"Bochten  {self.stats[1]}", (1060, 468))
         ui.button(scr, (830, 534, 390, 56), "NIEUW CIRCUIT", self.new_preview)
-        text(scr, f["s"], "1-5 moeilijkheid  -  N nieuw circuit  -  ENTER start  -  ESC terug",
+        text(scr, f["s"], "1-4 moeilijkheid  -  N nieuw circuit  -  ENTER start  -  ESC terug",
              (830, 614), (150, 165, 195))
 
     # ---- garage

@@ -1,44 +1,21 @@
 {
-  "level": 3,
+  "level": 4,
   "bots": 7,
   "laps_q": 5,
   "laps_gp": 3,
   "weather": 0,
-  "env": 2,
+  "env": 4,
   "volume": 1,
   "gp_races": 4,
-  "traffic": 34,
+  "traffic": 40,
   "car": {
-    "model": 0,
-    "tint": 4,
+    "model": 5,
+    "tint": 22,
     "stats": [
       10,
       10,
       10,
       10
     ]
-  },
-  "truck": {
-    "style": 3,
-    "color": 3,
-    "accent": 0,
-    "decal": 4,
-    "wheels": 2,
-    "lights": 1,
-    "stats": [
-      10,
-      10,
-      10,
-      10
-    ]
-  },
-  "arena_mode": 1,
-  "arena_bots": 3,
-  "arena_time": 120,
-  "hs": {
-    "free": [],
-    "battle": [],
-    "stunt": 0,
-    "stunt_name": ""
   }
 }
