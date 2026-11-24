@@ -76,7 +76,7 @@ STAT_MAX = 10                               # tuning: elk onderdeel vrij van 0 t
 STAT_NAMES = ["Topsnelheid", "Acceleratie", "Wendbaarheid", "Nitro"]
 SHEET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cars_sheet.png")
 SHEET_COLS, CELL_W, CELL_H = 10, 208, 112      # indeling van cars_sheet.png
-NUM_CARS = 39                                  # aantal auto's in de sheet
+NUM_CARS = 40                                  # aantal auto's in de sheet
 TINT_STEPS = 24                                # kleurtint-standen in de garage
 
 SAVE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "racegame_save.json")
