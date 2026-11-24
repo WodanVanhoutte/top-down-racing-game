@@ -2434,7 +2434,9 @@ class Confetti:
         if spawn:
             for _ in range(3):
                 self.p.append([random.uniform(0, W), -10, random.uniform(-40, 40),
-                               random.uniform(120, 260), random.choice(PALETTE + ACCENTS),
+                               random.uniform(120, 260), random.choice([(235, 50, 95), (255, 165, 40),
+                                                                        (110, 255, 140), (100, 190, 255),
+                                                                        (235, 235, 240), (255, 220, 70)]),
                                random.uniform(6, 11), random.uniform(0, TAU)])
         for q in self.p:
             q[6] += dt * 7
