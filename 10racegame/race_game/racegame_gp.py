@@ -45,6 +45,7 @@ HALF = ROAD_W / 2
 DS = 12                 # afstand tussen punten van de middenlijn (px)
 WALL_LIMIT = HALF - 8   # off-road: zo ver mag het midden van een auto van de middenlijn
 ENV_NAMES = ["Natuur", "Stad", "Off-road", "Snelweg", "Tokyo"]
+ENV_NATURE = 0
 ENV_HIGHWAY = 3
 ENV_TOKYO = 4
 TK_HALF = 118                                    # Tokyo: extra breed asfalt om te driften
@@ -211,6 +212,49 @@ def _polar_curve(K, a0, R):
     return pts
 
 
+def _spline_curve(R, corners, variation, aspect, angle_jitter=0.14, spacing=None,
+                  radius_profile=None, shape_power=1.0):
+    """Maak een gesloten, vloeiende baan uit onregelmatig geplaatste bochten."""
+    count = corners
+    phase = random.uniform(0, TAU)
+    step = TAU / count
+    flatten = random.uniform(*aspect)
+    rotation = random.uniform(0, TAU)
+    cr, sr = math.cos(rotation), math.sin(rotation)
+    anchors = []
+    if spacing is None:
+        angles = [phase + i * step + random.uniform(-angle_jitter, angle_jitter) * step
+                  for i in range(count)]
+    else:
+        total = sum(spacing)
+        angles = []
+        angle = phase
+        for weight in spacing:
+            angles.append(angle)
+            angle += TAU * weight / total
+    for i in range(count):
+        angle = angles[i]
+        offset = radius_profile[i] if radius_profile is not None else 0
+        radius = 1 + random.uniform(-variation, variation) + offset
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        x = R * radius * math.copysign(abs(cos_a) ** shape_power, cos_a)
+        y = R * flatten * radius * math.copysign(abs(sin_a) ** shape_power, sin_a)
+        anchors.append((x * cr - y * sr, x * sr + y * cr))
+
+    pts = []
+    for i, p1 in enumerate(anchors):
+        p0, p2, p3 = anchors[i - 1], anchors[(i + 1) % count], anchors[(i + 2) % count]
+        for sample in range(36):
+            t = sample / 36
+            t2, t3 = t * t, t * t * t
+            pts.append(tuple(
+                0.5 * (2 * p1[axis] + (-p0[axis] + p2[axis]) * t
+                       + (2 * p0[axis] - 5 * p1[axis] + 4 * p2[axis] - p3[axis]) * t2
+                       + (-p0[axis] + 3 * p1[axis] - 3 * p2[axis] + p3[axis]) * t3)
+                for axis in (0, 1)))
+    return pts
+
+
 def _resample(pts, ds):
     """Verdeel een gesloten polylijn in punten op gelijke afstand."""
     n = len(pts)
@@ -279,13 +323,12 @@ def _straightest_start(pts):
 
 def generate_centerline(level):
     cfg = LEVELS[level]
-    a0 = cfg["A0"]
-    for attempt in range(800):
-        if attempt and attempt % 80 == 0:
-            a0 *= 0.85                      # lukt het niet? iets rustiger maken
-        raw = _polar_curve(cfg["K"], a0, cfg["R"])
-        if raw is None:
-            continue
+    corners = max(6, round(cfg["K"] * 0.8))
+    variation = 0.08 + cfg["A0"] * 0.35
+    for attempt in range(120):
+        if attempt and attempt % 12 == 0:
+            variation = max(0.06, variation * 0.88)
+        raw = _spline_curve(cfg["R"], corners, variation, (0.68, 0.84))
         pts = _resample(raw, DS)
         if len(pts) < 150 or not _valid(pts, cfg["min_r"]):
             continue
@@ -293,16 +336,60 @@ def generate_centerline(level):
     return _straightest_start(_resample(_polar_curve(0, 0, cfg["R"]), DS))
 
 
+def generate_nature_centerline(level):
+    """F1-geïnspireerd circuit met asymmetrische bochten, hairpin en chicane."""
+    cfg = LEVELS[level]
+    corners = max(14, round(cfg["K"] * 0.95)) + level + 1
+    variation = 0.04 + cfg["A0"] * 0.12
+    feature_size = 0.12 + level * 0.02
+    shape_power = 0.84
+    add_infield_corner = random.random() < 0.65
+    for attempt in range(120):
+        if attempt and attempt % 12 == 0:
+            variation = max(0.025, variation * 0.9)
+            feature_size = max(0.05, feature_size * 0.9)
+            shape_power = min(0.98, shape_power + 0.02)
+
+        spacing = [random.uniform(0.85, 1.15) for _ in range(corners)]
+        spacing[:3] = [1.65, 1.65, 1.25]
+        second_straight = corners // 2
+        spacing[second_straight - 1:second_straight + 1] = [1.4, 1.6]
+        hairpin, chicane = corners // 4, 3 * corners // 4
+
+        profile = [0.0] * corners
+        for i in range(corners):
+            hairpin_distance = min((i - hairpin) % corners, (hairpin - i) % corners)
+            profile[i] -= feature_size * math.exp(-0.5 * (hairpin_distance / 2.2) ** 2)
+            chicane_in = min((i - (chicane - 2)) % corners, ((chicane - 2) - i) % corners)
+            chicane_out = min((i - (chicane + 2)) % corners, ((chicane + 2) - i) % corners)
+            profile[i] += feature_size * 0.9 * math.exp(-0.5 * (chicane_in / 1.6) ** 2)
+            profile[i] -= feature_size * math.exp(-0.5 * (chicane_out / 1.6) ** 2)
+
+        if add_infield_corner:
+            infield_index = corners // 2
+            infield_depth = feature_size * 1.3
+            profile[infield_index] -= infield_depth * 0.75
+            profile[(infield_index + 1) % corners] -= infield_depth
+            profile[(infield_index + 2) % corners] -= infield_depth
+            profile[(infield_index + 3) % corners] -= infield_depth * 0.75
+
+        raw = _spline_curve(cfg["R"], corners, variation, (0.68, 0.84),
+                            spacing=spacing, radius_profile=profile, shape_power=shape_power)
+        pts = _resample(raw, DS)
+        if len(pts) >= 150 and _valid(pts, cfg["min_r"]):
+            return _straightest_start(pts)
+    return generate_centerline(level)
+
+
 def generate_highway_centerline(level):
     """Lange, ruime snelwegring met zachte bochten (de bochten nemen toe met de moeilijkheid)."""
     cfg = HW_LEVELS[level]
-    a0 = cfg["A0"]
-    for attempt in range(800):
-        if attempt and attempt % 80 == 0:
-            a0 *= 0.85
-        raw = _polar_curve(cfg["K"], a0, HW_R)
-        if raw is None:
-            continue
+    corners = max(7, round(cfg["K"] * 1.1))
+    variation = 0.04 + cfg["A0"] * 0.3
+    for attempt in range(120):
+        if attempt and attempt % 12 == 0:
+            variation = max(0.04, variation * 0.88)
+        raw = _spline_curve(HW_R, corners, variation, (0.72, 0.86))
         pts = _resample(raw, DS)
         if len(pts) < 400 or not _valid(pts, cfg["min_r"], 2 * HW_HALF + 20):
             continue
@@ -564,13 +651,12 @@ def make_footbridge(length, ang):
 def generate_tokyo_centerline(level):
     """Vloeiend drift-circuit: ruime, brede bochten met enkele krappe haarspelden."""
     cfg = TK_LEVELS[level]
-    a0 = cfg["A0"]
-    for attempt in range(900):
-        if attempt and attempt % 90 == 0:
-            a0 *= 0.88
-        raw = _polar_curve(cfg["K"], a0, cfg["R"])
-        if raw is None:
-            continue
+    corners = max(8, round(cfg["K"] * 0.8))
+    variation = 0.08 + cfg["A0"] * 0.35
+    for attempt in range(120):
+        if attempt and attempt % 12 == 0:
+            variation = max(0.06, variation * 0.88)
+        raw = _spline_curve(cfg["R"], corners, variation, (0.66, 0.82))
         pts = _resample(raw, DS)
         if len(pts) < 300 or not _valid(pts, cfg["min_r"], 2 * TK_HALF + 30):
             continue
@@ -3447,6 +3533,8 @@ class App:
 
     def gen_raw(self):
         """Nieuwe middenlijn voor het gekozen soort kaart (circuit of snelweg)."""
+        if self.save["env"] == ENV_NATURE:
+            return generate_nature_centerline(self.save["level"])
         if self.save["env"] == ENV_HIGHWAY:
             return generate_highway_centerline(self.save["level"])
         if self.save["env"] == ENV_TOKYO:
@@ -3664,9 +3752,11 @@ class App:
 
     def set_env(self, v):
         kind = lambda e: 1 if e == ENV_HIGHWAY else (2 if e == ENV_TOKYO else 0)
-        was = kind(self.save["env"])
+        old_env = self.save["env"]
+        was = kind(old_env)
         self.save["env"] = v
-        if was != kind(v):                          # snelweg / Tokyo / gewoon circuit: ander soort voorbeeld nodig
+        nature_changed = (old_env == ENV_NATURE) != (v == ENV_NATURE)
+        if was != kind(v) or nature_changed:         # baanstijl gewijzigd: nieuw voorbeeld nodig
             self.new_preview()
 
     # ---- hoofdlus
