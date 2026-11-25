@@ -46,6 +46,7 @@ DS = 12                 # afstand tussen punten van de middenlijn (px)
 WALL_LIMIT = HALF - 8   # off-road: zo ver mag het midden van een auto van de middenlijn
 ENV_NAMES = ["Natuur", "Stad", "Off-road", "Snelweg", "Tokyo"]
 ENV_NATURE = 0
+ENV_OFFROAD = 2
 ENV_HIGHWAY = 3
 ENV_TOKYO = 4
 TK_HALF = 118                                    # Tokyo: extra breed asfalt om te driften
@@ -78,6 +79,7 @@ STAT_NAMES = ["Topsnelheid", "Acceleratie", "Wendbaarheid", "Nitro"]
 SHEET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cars_sheet.png")
 SHEET_COLS, CELL_W, CELL_H = 10, 208, 112      # indeling van cars_sheet.png
 NUM_CARS = 40                                  # aantal auto's in de sheet
+RALLY_MODEL = NUM_CARS - 1                     # model 40 in de garage
 TINT_STEPS = 24                                # kleurtint-standen in de garage
 
 SAVE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "racegame_save.json")
@@ -2556,7 +2558,7 @@ class Race:
         info = {"Jij": (dict(model=car_cfg["model"], tint=car_cfg["tint"]),
                         car_params(car_cfg["stats"]), 1.0)}
         for f in field:
-            look = dict(model=f["model"], tint=0)
+            look = dict(model=f["model"], tint=f["tint"])
             prm = dict(vmax=cfg["ai_vmax"] * f["skill"], accel=BASE_ACCEL, turn=1.0, nitro=100)
             info[f["name"]] = (look, prm, f["skill"])
 
@@ -3366,14 +3368,24 @@ class Race:
 
 
 # ------------------------------------------------------------------ tegenstanders
-def make_field(n, level, avoid_model):
+def make_field(n, level, avoid_model, avoid_tint, env):
     """Maak n bots met eigen naam, auto en rijvaardigheid."""
     names = random.sample(BOT_NAMES, n)
-    models = random.sample([m for m in range(NUM_CARS) if m != avoid_model], n)
+    if env == ENV_OFFROAD:
+        models = [RALLY_MODEL] * n
+        start = random.randrange(TINT_STEPS)
+        tints = [(start + round(i * TINT_STEPS / n)) % TINT_STEPS for i in range(n)] if n else []
+        while avoid_model == RALLY_MODEL and avoid_tint in tints:
+            start = (start + 1) % TINT_STEPS
+            tints = [(start + round(i * TINT_STEPS / n)) % TINT_STEPS for i in range(n)]
+        random.shuffle(tints)
+    else:
+        models = random.sample([m for m in range(NUM_CARS) if m != avoid_model], n)
+        tints = [0] * n
     spread = max(0.012, 0.035 - 0.005 * (level - 1))
     skills = [1 - spread * i - random.uniform(0, 0.008) for i in range(n)]
     random.shuffle(skills)
-    return [dict(name=names[i], model=models[i], tint=0, color=ART.color(models[i], 0),
+    return [dict(name=names[i], model=models[i], tint=tints[i], color=ART.color(models[i], tints[i]),
                  skill=skills[i]) for i in range(n)]
 
 
@@ -3589,7 +3601,7 @@ class App:
         s = self.save
         write_save(s)
         pcol = ART.color(s["car"]["model"], s["car"]["tint"])
-        self.field = make_field(s["bots"], s["level"], s["car"]["model"])
+        self.field = make_field(s["bots"], s["level"], s["car"]["model"], s["car"]["tint"], s["env"])
         if self.mode == "gp":
             names = ["Jij"] + [f["name"] for f in self.field]
             colors = {"Jij": pcol}
