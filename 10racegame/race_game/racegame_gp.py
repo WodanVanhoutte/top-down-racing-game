@@ -3179,6 +3179,19 @@ class Race:
 
         screen.blit(A["vignette"], (0, 0))
         self._hud(screen, A)
+        if self.state == "countdown" or (self.state == "race" and self.go_t > 0):
+            self._draw_player_marker(screen, cx, cy)
+
+    def _draw_player_marker(self, screen, cx, cy):
+        car = self.player
+        x, y = int(car.x - cx), int(car.y - cy - car.z * 0.55)
+        sprite = pygame.transform.rotozoom(
+            car.sprite, -math.degrees(car.heading), 1 + car.z / 110)
+        rect = sprite.get_rect(center=(x, y))
+        outline = pygame.mask.from_surface(sprite).outline()
+        points = [(rect.x + px, rect.y + py) for px, py in outline]
+        color = (245, 220, 150) if (pygame.time.get_ticks() // 140) % 2 == 0 else (145, 125, 85)
+        pygame.draw.lines(screen, color, True, points, 2)
 
     def _drift_hud(self, screen, f):
         """Tokyo: driftpunten, lopende keten, multiplier en grote melding in het midden."""
