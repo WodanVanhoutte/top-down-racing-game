@@ -77,6 +77,7 @@ MAX_BOTS = 7
 STAT_MAX = 10                               # tuning: elk onderdeel vrij van 0 tot 10
 STAT_NAMES = ["Topsnelheid", "Acceleratie", "Wendbaarheid", "Nitro"]
 SHEET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cars_sheet.png")
+GARAGE_ICON_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "garage_wrench.png")
 SHEET_COLS, CELL_W, CELL_H = 10, 208, 112      # indeling van cars_sheet.png
 NUM_CARS = 40                                  # aantal auto's in de sheet
 RALLY_MODEL = NUM_CARS - 1                     # model 40 in de garage
@@ -336,6 +337,33 @@ def generate_centerline(level):
             continue
         return _straightest_start(pts)
     return _straightest_start(_resample(_polar_curve(0, 0, cfg["R"]), DS))
+
+
+def generate_offroad_centerline(level):
+    """Maak voor off-road een asymmetrische baan met onregelmatige bochten."""
+    cfg = LEVELS[level]
+    corners = max(9, round(cfg["K"] * 0.9))
+    variation = 0.16 + cfg["A0"] * 0.35
+    for attempt in range(180):
+        if attempt and attempt % 30 == 0:
+            variation = max(0.12, variation * 0.9)
+
+        spacing = [random.uniform(0.55, 1.55) for _ in range(corners)]
+        profile = [random.uniform(-0.22, 0.22) for _ in range(corners)]
+        profile = [
+            0.25 * profile[(i - 1) % corners] + 0.5 * profile[i]
+            + 0.25 * profile[(i + 1) % corners]
+            for i in range(corners)
+        ]
+        raw = _spline_curve(
+            cfg["R"], corners, variation, (0.68, 0.9),
+            angle_jitter=0.2, spacing=spacing, radius_profile=profile,
+            shape_power=random.uniform(0.78, 1.0),
+        )
+        pts = _resample(raw, DS)
+        if len(pts) >= 150 and _valid(pts, cfg["min_r"]):
+            return _straightest_start(pts)
+    return generate_nature_centerline(level)
 
 
 def generate_nature_centerline(level):
@@ -2775,7 +2803,8 @@ class Race:
             for c in cars:
                 c.update_progress(t)
                 laps = max(0, int(c.progress // t.n))
-                if laps > c.laps:
+                lap_advanced = laps > c.laps
+                if lap_advanced:
                     c.laps = laps
                     lt = self.time - c.last_lap_t
                     c.last_lap_t = self.time
@@ -2790,7 +2819,7 @@ class Race:
                             self.say("BESTE RONDE!", fmt(lt), (190, 120, 255))
                         else:
                             self.say(f"RONDE {laps + 1} / {self.laps}", fmt(lt))
-                if c.laps >= self.laps and not c.finished:
+                if lap_advanced and laps >= self.laps and not c.finished:
                     c.finished, c.finish_time = True, self.time
             if t.dirt:
                 for c in cars:
@@ -3514,6 +3543,7 @@ class App:
         pygame.init()
         self.screen = pygame.display.set_mode((W, H), pygame.SCALED)
         pygame.display.set_caption("Top-down Racer 2 - Grand Prix")
+        self.garage_icon = pygame.image.load(GARAGE_ICON_FILE).convert_alpha()
         self.clock = pygame.time.Clock()
         self.A = make_assets()
         self.f = self.A["fonts"]
@@ -3558,6 +3588,8 @@ class App:
 
     def gen_raw(self):
         """Nieuwe middenlijn voor het gekozen soort kaart (circuit of snelweg)."""
+        if self.save["env"] == ENV_OFFROAD:
+            return generate_offroad_centerline(self.save["level"])
         if self.save["env"] == ENV_NATURE:
             return generate_nature_centerline(self.save["level"])
         if self.save["env"] == ENV_HIGHWAY:
@@ -3909,16 +3941,11 @@ class App:
                                              (cx + 12, cy + 32), (cx + 8, cy + 32)])
             pygame.draw.rect(surf, gold, (cx - 9, cy + 32, 18, 30))
             pygame.draw.rect(surf, dark, (cx - 40, cy + 62, 80, 16), border_radius=4)
-        elif i == 2:                                                 # garage: tandwiel
-            ring = tone((200, 255, 245))
-            pts = []
-            for n in range(48):
-                a = TAU * n / 48
-                rad = 84 if (n // 3) % 2 == 0 else 68
-                pts.append((cx + math.cos(a) * rad, cy + 10 + math.sin(a) * rad))
-            pygame.draw.polygon(surf, ring, pts)
-            pygame.draw.circle(surf, top, (cx, cy + 10), 34)
-            pygame.draw.circle(surf, tone((120, 220, 205)), (cx, cy + 10), 34, 6)
+        elif i == 2:                                                 # garage: meegeleverde steeksleutel
+            icon_size = max(1, int(min(210, w * 0.68)))
+            icon = pygame.transform.smoothscale(self.garage_icon, (icon_size, icon_size))
+            icon.set_alpha(int(155 + 100 * heat))
+            surf.blit(icon, icon.get_rect(center=(cx, cy)))
         else:                                                        # instellingen: schuifregelaars
             for n, pos in enumerate((0.7, 0.3, 0.55)):
                 yy = cy - 40 + n * 56
