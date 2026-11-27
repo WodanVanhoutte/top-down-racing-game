@@ -1,0 +1,7 @@
+RACE-MUZIEK
+Zet in deze map het bestand "It's 2001 and you're drifting in tokyo" (mp3, ogg, wav of flac).
+De bestandsnaam moet "2001" of "drifting" bevatten.
+
+- In de menu's speelt menu.ogg.
+- Start je een race, dan fadet de menu-muziek weg en start een nummer uit de mix (elke race een ander).
+- Staat het bestand hier niet, dan is het stil tijdens de race en toont het menu een gele waarschuwing.

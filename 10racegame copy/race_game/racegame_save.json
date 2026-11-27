@@ -6,6 +6,7 @@
   "weather": 0,
   "env": 0,
   "volume": 1,
+  "music": 1,
   "gp_races": 4,
   "traffic": 40,
   "car": {

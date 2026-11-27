@@ -106,7 +106,7 @@ LEVELS = {
 BOT_NAMES = ["Viper", "Blitz", "Nova", "Turbo", "Apex", "Drift", "Rocket", "Comet",
              "Falcon", "Storm"]
 
-DEFAULTS = dict(level=2, bots=3, laps_q=5, laps_gp=3, weather=0, env=0, volume=7, gp_races=4, traffic=12,
+DEFAULTS = dict(level=2, bots=3, laps_q=5, laps_gp=3, weather=0, env=0, volume=7, music=1, gp_races=4, traffic=12,
                 car=dict(model=0, tint=0, stats=[5, 5, 5, 5]))
 
 
@@ -1973,170 +1973,108 @@ class CarArt:
 SR = 22050
 
 
+# ------------------------------------------------------------------ geluid (uit 14racegame / tokyo_drift)
+_HERE = os.path.dirname(os.path.abspath(__file__))
+SOUND_DIR = os.path.join(_HERE, "sounds")                  # geluidseffecten (.wav)
+MUSIC_DIR = os.path.join(_HERE, "music")                   # menu.ogg + (optioneel) de race-mix
+MENU_MUSIC = os.path.join(MUSIC_DIR, "menu.ogg")
+MUSIC_TYPES = (".mp3", ".ogg", ".wav", ".flac", ".opus")
+
+# De race-muziek is 1 lang bestand: "It's 2001 and you're drifting in tokyo".
+# Zet dat bestand in de map music (de naam moet "2001" of "drifting" bevatten).
+RACE_TRACKS = [
+    ("Press Enter", 0), ("Distance", 240), ("Video Girl", 398), ("ASI", 605),
+    ("Drift", 842), ("Text Me Back", 1070), ("2001", 1310), ("Soft Reboot", 1550),
+    ("Daytime Lantern", 1789), ("Just Drive", 2024), ("Easy Muwi", 2263), ("Digital Crush", 2503),
+    ("Shonen Heart", 2647), ("No Signal, No Goodbye", 2844), ("Shibuya Sunset", 3083), ("Offline Forever", 3274),
+]
+# effecten die dit spel gebruikt -> bestand in de map sounds
+SOUND_NAMES = ["boost", "blowoff", "hit", "bump", "pop", "beep", "go", "move", "ok", "back",
+               "bank", "clip", "fail", "lap", "finish"]
+SOUND_ALIAS = {"click": "move", "jump": "blowoff", "thud": "bump", "splash": "pop"}
+
+
+def find_race_music():
+    """Zoekt het mix-bestand in de map music (of naast het spel). Geeft None als het er niet is."""
+    for folder in (MUSIC_DIR, _HERE):
+        if os.path.isdir(folder):
+            for name in sorted(os.listdir(folder)):
+                low = name.lower()
+                if ("2001" in low or "drifting" in low) and low.endswith(MUSIC_TYPES):
+                    return os.path.join(folder, name)
+    return None
+
+
 class Sfx:
-    """Alle geluiden worden hier zelf gesynthetiseerd: je hebt geen geluidsbestanden nodig.
+    """Geluiden uit bestanden: 24 motorlussen (DeLorean V6) waartussen per toerental gemengd wordt,
+    plus losse effecten, banden, regen, nitro en de muziek (menu + race-mix).
     Lukt het starten van het geluid niet (geen audioapparaat), dan blijft het spel gewoon stil."""
-    N_ENG = 8
-    CH_ENG, CH_SKID, CH_DIRT, CH_BOTS, CH_RAIN, N_RES = 0, 8, 9, 10, 11, 12
+    N_ENG = 24
+    CH_SKID, CH_BOTS, CH_RAIN, CH_NITRO, N_RES = 24, 25, 26, 27, 28
 
     def __init__(self):
-        self.ok = False
-        self.volume = 0.7
+        self.ok = False            # geluidseffecten geladen?
+        self.music_ok = False      # muziek kan spelen?
+        self.volume = 0.7          # geluidseffecten
+        self.music_vol = 0.7
+        self.engine_vol = 1.0
+        self.music_on = True
         self.paused = False
         self.snd = {}
+        self.eng = []
+        self.playing = None        # wat nu speelt: "menu", "race" of None (stil)
+        self.want = None           # wat moet spelen; verschilt het, dan faden we eerst uit
+        self.fade = 0.0            # 0 = stil, 1 = vol
+        self.menu_pos = 0.0        # waar de menu-muziek gebleven was (seconden)
+        self.race_start = 0.0      # starttijd van het gekozen nummer in de mix
+        self.race_file = None
+        self.todo = []
+        self.rng = random.Random()
+        self.rpm = 0.0             # vloeiend gemaakte waarden voor de motor
+        self.power = 0.0
+        self.nitro_vol = 0.0
         try:
             pygame.mixer.quit()
-            pygame.mixer.init(frequency=SR, size=-16, channels=1, buffer=512, allowedchanges=0)
-            pygame.mixer.set_num_channels(32)
+            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
+            pygame.mixer.set_num_channels(44)
             pygame.mixer.set_reserved(self.N_RES)
             self.chs = [pygame.mixer.Channel(i) for i in range(self.N_RES)]
-            self._build()
+            self.music_ok = True
+            self._load()
             self.ok = True
-        except Exception:
-            self.ok = False
+        except Exception as err:
+            print("Geluid uit:", err)
 
-    # ---- synthese
-    @staticmethod
-    def _sound(samples):
-        pk = max(abs(v) for v in samples) or 1.0
-        k = 0.95 / pk if pk > 0.95 else 1.0                     # niet laten oversturen
-        arr = array("h", [int(clamp(v * k, -1.0, 1.0) * 30000) for v in samples])
-        return pygame.mixer.Sound(buffer=arr.tobytes())
+    def _load(self):
+        def wav(name):
+            return pygame.mixer.Sound(os.path.join(SOUND_DIR, name + ".wav"))
+        self.eng = [wav(f"engine_{k:02d}") for k in range(self.N_ENG)]
+        self.skid, self.rain, self.nitro = wav("skid"), wav("rain"), wav("nitro")
+        for name in SOUND_NAMES:
+            self.snd[name] = wav(name)
 
-    @staticmethod
-    def _lowpass(x, a):
-        y, out = 0.0, []
-        for v in x:
-            y += a * (v - y)
-            out.append(y)
-        return out
-
-    def _noise(self, n, a=1.0):
-        x = [self.rng.uniform(-1, 1) for _ in range(n)]
-        return x if a >= 1.0 else self._lowpass(x, a)
-
-    def _build(self):
-        self.rng = random.Random(7)
-        tp = TAU
-        # motor: 8 lussen met stijgende toonhoogte (we mengen er tussen)
-        N = 5512
-        base_noise = self._noise(N, 0.5)
-        self.eng = []
-        for k in range(self.N_ENG):
-            f = 38 * (235 / 38) ** (k / (self.N_ENG - 1))
-            cyc = max(1, round(f * N / SR))
-            buf = []
-            for i in range(N):
-                ph = tp * cyc * i / N
-                v = (math.sin(ph) * 0.5 + math.sin(2 * ph) * 0.32 + math.sin(3 * ph) * 0.2
-                     + math.sin(4 * ph) * 0.12 + math.sin(5 * ph + 0.5) * 0.08 + base_noise[i] * 0.07)
-                buf.append(math.tanh(v * 1.4) * 0.55)
-            self.eng.append(self._sound(buf))
-        # bandenkrijs (loop, 0,5 s)
-        N2 = SR // 2
-        nz = self._noise(N2, 0.7)
-        self.skid = self._sound([0.3 * math.sin(tp * 1400 * i / SR + 3 * math.sin(tp * 8 * i / SR))
-                                 + 0.18 * math.sin(tp * 2100 * i / SR) + 0.25 * nz[i] for i in range(N2)])
-        # zand/gravel (loop, 1 s)
-        N3 = SR
-        d = self._lowpass(self._noise(N3), 0.12)
-        d = self._lowpass(d, 0.5)
-        self.dirt = self._sound([clamp(v * 7.0, -1, 1) * 0.6 for v in d])
-        # regen (loop, 1 s)
-        r = self._noise(N3)
-        lp = self._lowpass(r, 0.25)
-        self.rain = self._sound([(r[i] - lp[i]) * 0.5 for i in range(N3)])
-
-        sn = {}
-
-        def mk(dur, fn):
-            return self._sound([fn(i / SR) for i in range(int(SR * dur))])
-
-        nz1 = self._noise(SR, 0.6)
-        nz2 = self._noise(SR, 0.2)
-        nz3 = self._noise(SR, 0.9)
-
-        def n_at(buf, t):
-            return buf[int(t * SR) % len(buf)]
-
-        sn["hit"] = mk(0.35, lambda t: math.sin(tp * 70 * t) * math.exp(-t * 18) * 0.8
-                       + math.sin(tp * 380 * t) * math.exp(-t * 35) * 0.25 + n_at(nz1, t) * math.exp(-t * 16) * 0.6)
-        sn["bump"] = mk(0.22, lambda t: math.sin(tp * 55 * t) * math.exp(-t * 22) * 0.9
-                        + n_at(nz2, t) * math.exp(-t * 20) * 1.2)
-
-        def thud_fn():
-            ph = [0.0]
-
-            def f(t):
-                fr = 110 - 70 * min(1.0, t / 0.3)
-                ph[0] += tp * fr / SR
-                return math.sin(ph[0]) * math.exp(-t * 8) * 0.9 + n_at(nz2, t) * math.exp(-t * 14) * 1.4
-            return f
-        sn["thud"] = mk(0.45, thud_fn())
-
-        def jump_fn():
-            ph = [0.0]
-
-            def f(t):
-                ph[0] += tp * (160 + 260 * t / 0.45) / SR
-                e = math.sin(math.pi * t / 0.45)
-                return math.sin(ph[0]) * 0.3 * e + (n_at(nz3, t) - n_at(nz1, t)) * 0.35 * e
-            return f
-        sn["jump"] = mk(0.45, jump_fn())
-
-        def boost_fn():
-            ph = [0.0]
-
-            def f(t):
-                ph[0] += tp * (90 + 110 * t) / SR
-                e = min(1.0, t / 0.06) * math.exp(-t * 2.6)
-                return (n_at(nz3, t) - n_at(nz1, t)) * 0.8 * e + math.sin(ph[0]) * 0.25 * e
-            return f
-        sn["boost"] = mk(0.9, boost_fn())
-
-        def splash(t):
-            v = n_at(nz1, t) * math.exp(-t * 6) * 0.9
-            for t0, fr in ((0.08, 620), (0.18, 840), (0.3, 520)):
-                if t > t0:
-                    v += math.sin(tp * fr * (t - t0)) * math.exp(-(t - t0) * 40) * 0.3
-            return v
-        sn["splash"] = mk(0.55, splash)
-        sn["beep"] = mk(0.2, lambda t: math.sin(tp * 440 * t) * min(1, t * 80) * math.exp(-t * 6) * 0.7)
-        sn["go"] = mk(0.5, lambda t: (math.sin(tp * 880 * t) + 0.4 * math.sin(tp * 1320 * t))
-                      * min(1, t * 80) * math.exp(-t * 4) * 0.55)
-        sn["lap"] = mk(0.4, lambda t: (math.sin(tp * 660 * t) if t < 0.15 else math.sin(tp * 880 * t))
-                       * math.exp(-(t % 0.15 if t < 0.15 else t - 0.15) * 9) * 0.6)
-        notes = (523.0, 659.0, 784.0, 1047.0)
-
-        def fanfare(t):
-            k = min(3, int(t / 0.16))
-            lt = t - k * 0.16
-            return (math.sin(tp * notes[k] * lt) + 0.3 * math.sin(tp * notes[k] * 2 * lt)) \
-                * min(1, lt * 120) * math.exp(-lt * (5 if k < 3 else 2.5)) * 0.5
-        sn["finish"] = mk(0.9, fanfare)
-        sn["click"] = mk(0.06, lambda t: math.sin(tp * 1000 * t) * math.exp(-t * 70) * 0.7)
-        self.snd = sn
-
-    # ---- afspelen
+    # ---- losse geluiden
     def play(self, name, vol=1.0):
+        name = SOUND_ALIAS.get(name, name)
         if self.ok and self.volume > 0 and name in self.snd:
-            snd = self.snd[name]
-            snd.set_volume(min(1.0, vol * self.volume))
-            snd.play()
+            s = self.snd[name]
+            s.set_volume(min(1.0, vol * self.volume))
+            s.play()
 
+    # ---- doorlopende geluiden (motor, banden, regen, nitro)
     def start_loops(self, wet=False):
         if not self.ok:
             return
         self.stop_loops()
         for k in range(self.N_ENG):
-            self.chs[self.CH_ENG + k].play(self.eng[k], loops=-1)
-            self.chs[self.CH_ENG + k].set_volume(0)
+            self.chs[k].play(self.eng[k], loops=-1)
         self.chs[self.CH_SKID].play(self.skid, loops=-1)
-        self.chs[self.CH_DIRT].play(self.dirt, loops=-1)
-        self.chs[self.CH_BOTS].play(self.eng[3], loops=-1)
+        self.chs[self.CH_BOTS].play(self.eng[9], loops=-1)
         self.chs[self.CH_RAIN].play(self.rain, loops=-1)
-        for c in (self.CH_SKID, self.CH_DIRT, self.CH_BOTS, self.CH_RAIN):
-            self.chs[c].set_volume(0)
+        self.chs[self.CH_NITRO].play(self.nitro, loops=-1)
+        for ch in self.chs:
+            ch.set_volume(0)
+        self.rpm = self.power = self.nitro_vol = 0.0
         self.paused = False
 
     def stop_loops(self):
@@ -2151,18 +2089,90 @@ class Sfx:
                 ch.set_volume(0)
 
     def loops(self, rpm, power, boosting, skid, dirt, bots, rain):
-        """Geluiden die continu doorlopen; waarden tussen 0 en 1."""
+        """Wordt elk beeld opgeroepen; alle waarden liggen tussen 0 en 1."""
         if not self.ok or self.paused:
             return
         v = self.volume
-        p = clamp(rpm, 0, 1) * (self.N_ENG - 1)
-        base = (0.2 + 0.45 * power) * (1.3 if boosting else 1.0)
+        # toerental en gas volgen vloeiend, zodat schakelen niet als een sprong klinkt
+        self.rpm += (clamp(rpm, 0, 1) - self.rpm) * 0.18
+        self.power += (power - self.power) * 0.15
+        self.nitro_vol += ((1.0 if boosting else 0.0) - self.nitro_vol) * 0.12
+        pos = self.rpm * (self.N_ENG - 1)                # welke lussen horen bij dit toerental
+        loud = (0.14 + 0.22 * self.power) * (1.0 + 0.15 * self.nitro_vol) * v * self.engine_vol
         for k in range(self.N_ENG):
-            self.chs[self.CH_ENG + k].set_volume(min(1.0, max(0.0, 1 - abs(k - p)) * base * v))
-        self.chs[self.CH_SKID].set_volume(min(1.0, skid * 0.5 * v))
-        self.chs[self.CH_DIRT].set_volume(min(1.0, dirt * 0.7 * v))
-        self.chs[self.CH_BOTS].set_volume(min(1.0, bots * 0.35 * v))
+            near = max(0.0, 1 - abs(k - pos))            # 1 = precies deze lus, 0 = te ver weg
+            self.chs[k].set_volume(min(1.0, math.sqrt(near) * loud))
+        self.chs[self.CH_SKID].set_volume(min(1.0, (skid * 0.3 + dirt * 0.25) * v))   # banden + zand
+        self.chs[self.CH_BOTS].set_volume(min(1.0, bots * 0.09 * v * self.engine_vol))
         self.chs[self.CH_RAIN].set_volume(min(1.0, rain * 0.3 * v))
+        self.chs[self.CH_NITRO].set_volume(min(1.0, self.nitro_vol * 0.22 * v))
+
+    # ---- muziek: het menu en de race hebben elk hun eigen bestand, met een fade ertussen
+    def play_menu_music(self):
+        self.want = "menu"
+
+    def stop_music(self):
+        self.want = None
+
+    def toggle_music(self):
+        self.music_on = not self.music_on
+
+    def play_race_music(self):
+        """Kiest een ander nummer uit de mix. Geeft de titel terug (of None als het bestand er niet is)."""
+        self.race_file = find_race_music()
+        if not self.music_ok or not self.race_file:
+            self.want = None                             # geen mix: stilte tijdens de race
+            return None
+        if not self.todo:
+            self.todo = list(RACE_TRACKS)
+            self.rng.shuffle(self.todo)
+        title, self.race_start = self.todo.pop()
+        if self.playing == "race":
+            self.playing = "oud"
+        self.want = "race"
+        return title
+
+    def _switch(self):
+        if self.playing == "menu":
+            self.menu_pos += pygame.mixer.music.get_pos() / 1000
+        pygame.mixer.music.stop()
+        self.playing = None
+        try:
+            if self.want == "menu" and os.path.exists(MENU_MUSIC):
+                pygame.mixer.music.load(MENU_MUSIC)
+                try:
+                    pygame.mixer.music.play(start=self.menu_pos)
+                except Exception:
+                    self.menu_pos = 0.0
+                    pygame.mixer.music.play()
+                self.playing = "menu"
+            elif self.want == "race" and self.race_file:
+                pygame.mixer.music.load(self.race_file)
+                pygame.mixer.music.play(start=self.race_start)
+                self.playing = "race"
+        except Exception as err:
+            print("Muziek kan niet spelen:", err)
+            self.want = None
+
+    def update_music(self, duck=1.0, dt=1 / 60):
+        """Elk beeld oproepen: regelt het volume en de fade tussen menu- en racemuziek."""
+        if not self.music_ok:
+            return
+        if self.want != self.playing:
+            self.fade -= dt / 0.8 if self.playing else 1     # 0,8 s uitfaden
+            if self.fade <= 0:
+                self.fade = 0.0
+                self._switch()
+        else:
+            self.fade = min(1.0, self.fade + dt / 1.5)       # 1,5 s infaden
+            if self.playing and not pygame.mixer.music.get_busy():
+                if self.playing == "menu":
+                    self.menu_pos = 0.0
+                    self.playing = None
+                else:
+                    self.play_race_music()                   # de mix is afgelopen: volgend nummer
+        vol = self.music_vol * duck * self.fade if self.music_on else 0.0
+        pygame.mixer.music.set_volume(min(1.0, vol))
 
 
 # ------------------------------------------------------------------ auto
@@ -3677,6 +3687,8 @@ class App:
         self.save = load_save()
         self.sfx = Sfx()
         self.sfx.volume = self.save["volume"] / 10
+        self.sfx.music_on = bool(self.save.get("music", 1))
+        self.sfx.play_menu_music()
         self.state = "main"
         self.mode = "race"
         self.garage_from = "main"
@@ -3802,12 +3814,14 @@ class App:
         self.race = Race(self.cur_raw, s["level"],
                          dict(laps=laps, weather=s["weather"], env=s["env"], traffic=s["traffic"]),
                          s["car"], self.field, self.make_grid(), self.sfx)
+        self.sfx.play_race_music()                 # elke race een ander nummer uit de mix
         self.state = "race"
         self.paused = False
         self.sfx.set_paused(False)
 
     def leave_race(self):
         self.sfx.stop_loops()
+        self.sfx.play_menu_music()
         self.race = None
         self.paused = False
         self.gp = None
@@ -3868,6 +3882,9 @@ class App:
                 self.open_garage("main")
             elif key == pygame.K_4:
                 self.goto("settings")
+            elif key == pygame.K_m:                    # muziek aan/uit (ook opgeslagen)
+                self.save["music"] = 1 - int(self.save.get("music", 1))
+                self.sfx.music_on = bool(self.save["music"])
             elif key == pygame.K_LEFT:
                 self.menu_active = (self.menu_active - 1) % 4
             elif key == pygame.K_RIGHT:
@@ -3952,6 +3969,7 @@ class App:
             for e in pygame.event.get():
                 self.handle(e)
             self.update(self.dt)
+            self.sfx.update_music(0.4 if self.paused else 1.0, self.dt)
             self.draw()
             self.ui.end()
             pygame.display.flip()
